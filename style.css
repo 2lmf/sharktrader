@@ -594,6 +594,57 @@ input:checked+.slider:before {
     font-size: 0.8rem;
 }
 
+/* History Section */
+.history-section {
+    margin-bottom: 30px;
+}
+
+.trade-history {
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.history-item {
+    display: grid;
+    grid-template-columns: 0.8fr 1fr 1fr 1.5fr 1fr;
+    gap: 10px;
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.75rem;
+    align-items: center;
+}
+
+.history-item:last-child {
+    border-bottom: none;
+}
+
+.history-item .time {
+    color: var(--text-muted);
+}
+
+.history-item .symbol {
+    font-family: var(--font-header);
+    font-weight: 700;
+}
+
+.history-item .type {
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.history-item .fee {
+    color: #f39c12;
+    font-size: 0.65rem;
+}
+
+.empty-history {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
 /* Activity Log */
 .activity-log {
     background: rgba(0, 0, 0, 0.3);
