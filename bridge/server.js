@@ -32,6 +32,7 @@ app.get('/api/account', async (req, res) => {
 
         res.json(response.data);
     } catch (err) {
+        console.error("❌ Binance API Greška:", err.response?.data || err.message);
         res.status(500).json({ error: err.response?.data || err.message });
     }
 });
@@ -51,6 +52,7 @@ app.post('/api/order', async (req, res) => {
 
         res.json(response.data);
     } catch (err) {
+        console.error("❌ Binance Order Greška:", err.response?.data || err.message);
         res.status(500).json({ error: err.response?.data || err.message });
     }
 });

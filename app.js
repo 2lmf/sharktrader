@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.7 PRO) ---
+// --- SHARK TRADER SIMULATOR (v0.12 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -103,8 +103,8 @@ async function checkBridgeStatus() {
         if (state.liveMode && res.ok) {
             const data = await res.json();
             // Sync real balance (find USDT)
-            const usdt = data.balances.find(b => b.asset === 'USDT');
-            if (usdt) state.balance = parseFloat(usdt.free);
+            const usdtAsset = data.balances.find(b => b.asset === 'USDT');
+            state.balance = usdtAsset ? parseFloat(usdtAsset.free) : 0.00;
         }
     } catch (e) {
         state.bridgeConnected = false;
@@ -502,7 +502,12 @@ function renderHoldings() {
 
 function updateUI() {
     const balanceEl = document.getElementById('totalBalance');
+    const labelEl = document.querySelector('.wallet-stat .label');
     if (!balanceEl) return;
+
+    if (labelEl) {
+        labelEl.innerText = state.liveMode ? 'PRO LIVE BALANCE' : 'VIRTUAL BALANCE';
+    }
 
     // Calculate Net Worth: USDT Balance + Value of all Holdings
     let totalValue = state.balance;
