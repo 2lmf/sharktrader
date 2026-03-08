@@ -61,6 +61,64 @@ body {
     letter-spacing: 2px;
 }
 
+/* Switch UI */
+.nav-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.switch-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.switch-label {
+    font-size: 0.6rem;
+    font-family: var(--font-header);
+    color: var(--text-muted);
+    letter-spacing: 1px;
+}
+
+.switch-container input {
+    display: none;
+}
+
+.slider {
+    width: 40px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    position: relative;
+    transition: 0.3s;
+    border: 1px solid var(--glass-border);
+}
+
+.slider:before {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: 0.3s;
+}
+
+input:checked+.slider {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+}
+
+input:checked+.slider:before {
+    transform: translateX(20px);
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+}
+
 .accent {
     color: var(--accent);
 }
@@ -426,6 +484,55 @@ body {
 .btn-secondary {
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
+}
+
+/* News Section */
+.news-section {
+    margin-bottom: 30px;
+}
+
+.news-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.news-card {
+    display: flex;
+    gap: 15px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.02);
+    align-items: center;
+}
+
+.news-card img {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    object-fit: cover;
+}
+
+.news-content h4 {
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.news-content .source {
+    font-size: 0.65rem;
+    color: var(--accent);
+    text-transform: uppercase;
+}
+
+.loading-news {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
 }
 
 /* Activity Log */

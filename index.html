@@ -17,7 +17,14 @@
 
     <nav class="navbar">
         <div class="logo">
-            SHARK<span class="accent">TRADER v0.1</span>
+            SHARK<span class="accent">TRADER v0.4</span>
+        </div>
+        <div class="nav-controls">
+            <label class="switch-container">
+                <span class="switch-label">AUTO-TRADE</span>
+                <input type="checkbox" id="autoTradeToggle">
+                <span class="slider"></span>
+            </label>
         </div>
         <div class="wallet-stat">
             <span class="label">VIRTUAL BALANCE</span>
@@ -55,78 +62,8 @@
                 <i class="fas fa-chart-line"></i> LIVE MARKET (BINANCE FEED)
             </div>
             <div class="price-cards" id="priceCards">
-                <!-- BTC Card -->
-                <div class="price-card glass" data-symbol="BTCUSDT">
-                    <div class="coin-info">
-                        <i class="fab fa-bitcoin"></i>
-                        <div>
-                            <div class="symbol">BTC/USDT</div>
-                            <div class="name">Bitcoin</div>
-                        </div>
-                    </div>
-                    <div class="coin-price-container">
-                        <div class="coin-price" id="btcPrice">--.--- $</div>
-                        <div class="coin-change success" id="btcChange">+0.00%</div>
-                    </div>
-                    <div class="trade-actions">
-                        <button class="btn-trade buy" onclick="openTradeModal('BTCUSDT', 'buy')">BUY</button>
-                        <button class="btn-trade sell" onclick="openTradeModal('BTCUSDT', 'sell')">SELL</button>
-                    </div>
-                </div>
-                <!-- ETH Card -->
-                <div class="price-card glass" data-symbol="ETHUSDT">
-                    <div class="coin-info">
-                        <i class="fab fa-ethereum"></i>
-                        <div>
-                            <div class="symbol">ETH/USDT</div>
-                            <div class="name">Ethereum</div>
-                        </div>
-                    </div>
-                    <div class="coin-price-container">
-                        <div class="coin-price" id="ethPrice">-.--- $</div>
-                        <div class="coin-change error" id="ethChange">-0.00%</div>
-                    </div>
-                    <div class="trade-actions">
-                        <button class="btn-trade buy" onclick="openTradeModal('ETHUSDT', 'buy')">BUY</button>
-                        <button class="btn-trade sell" onclick="openTradeModal('ETHUSDT', 'sell')">SELL</button>
-                    </div>
-                </div>
-                <!-- SOL Card -->
-                <div class="price-card glass" data-symbol="SOLUSDT">
-                    <div class="coin-info">
-                        <i class="fas fa-s"></i>
-                        <div>
-                            <div class="symbol">SOL/USDT</div>
-                            <div class="name">Solana</div>
-                        </div>
-                    </div>
-                    <div class="coin-price-container">
-                        <div class="coin-price" id="solPrice">-.-- $</div>
-                        <div class="coin-change" id="solChange">+0.00%</div>
-                    </div>
-                    <div class="trade-actions">
-                        <button class="btn-trade buy" onclick="openTradeModal('SOLUSDT', 'buy')">BUY</button>
-                        <button class="btn-trade sell" onclick="openTradeModal('SOLUSDT', 'sell')">SELL</button>
-                    </div>
-                </div>
-                <!-- BNB Card -->
-                <div class="price-card glass" data-symbol="BNBUSDT">
-                    <div class="coin-info">
-                        <i class="fas fa-coins"></i>
-                        <div>
-                            <div class="symbol">BNB/USDT</div>
-                            <div class="name">Binance Coin</div>
-                        </div>
-                    </div>
-                    <div class="coin-price-container">
-                        <div class="coin-price" id="bnbPrice">-.-- $</div>
-                        <div class="coin-change" id="bnbChange">+0.00%</div>
-                    </div>
-                    <div class="trade-actions">
-                        <button class="btn-trade buy" onclick="openTradeModal('BNBUSDT', 'buy')">BUY</button>
-                        <button class="btn-trade sell" onclick="openTradeModal('BNBUSDT', 'sell')">SELL</button>
-                    </div>
-                </div>
+                <!-- Dinamički generirano iz app.js -->
+                <div class="loading-prices">Učitavam cijene s burze...</div>
             </div>
         </section>
 
@@ -138,6 +75,16 @@
             <div class="holdings-grid" id="holdingsGrid">
                 <!-- Populated by JS -->
                 <div class="empty-holdings">Vaš portfelj je prazan.</div>
+            </div>
+        </section>
+
+        <!-- Shark News Feed -->
+        <section class="news-section">
+            <div class="section-title">
+                <i class="fas fa-newspaper"></i> SHARK NEWS FEED
+            </div>
+            <div class="news-grid" id="newsGrid">
+                <div class="loading-news">Slušam šapat oceana (učcitavam vijesti)...</div>
             </div>
         </section>
 
