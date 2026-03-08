@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.5 PRO) ---
+// --- SHARK TRADER SIMULATOR (v0.7 PRO) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -29,11 +29,15 @@ const SHARK_AI = {
 };
 
 const savedWallet = localStorage.getItem('SHARK_WALLET');
+const savedAutoTrade = localStorage.getItem('SHARK_AUTOTRADE') === 'true';
+const savedLiveMode = localStorage.getItem('SHARK_LIVEMODE') === 'true';
 let state = {
     balance: savedWallet !== null ? parseFloat(savedWallet) : CONFIG.INITIAL_BALANCE,
     holdings: JSON.parse(localStorage.getItem('SHARK_HOLDINGS')) || {},
     prices: {},
-    autoTrade: false,
+    autoTrade: savedAutoTrade,
+    liveMode: savedLiveMode,
+    bridgeConnected: false,
     news: [],
     sentiment: {}
 };
@@ -43,30 +47,94 @@ let activeTrade = { symbol: null, type: null };
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🦈 Shark Trader Simulator Ready!");
+
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(() => console.log("Shark PWA: Service Worker Registered"))
+            .catch(err => console.error("Shark PWA: Registration Failed", err));
+    }
+
     initTradeModal();
     initAutoTrade();
+    initLiveMode();
     updateUI();
     renderPriceCards();
     fetchPrices();
     fetchNews();
     renderHoldings();
 
-    // Auto-update feed
+    // System checks
     setInterval(() => {
         fetchPrices();
+        checkBridgeStatus();
         if (state.autoTrade) runAutoTradeAgent();
+        updateUI();
         renderHoldings();
     }, CONFIG.UPDATE_INTERVAL);
 
-    // Refresh news every 30s
     setInterval(fetchNews, 30000);
 });
+
+function initLiveMode() {
+    const toggle = document.getElementById('liveModeToggle');
+    if (toggle) {
+        toggle.checked = state.liveMode;
+        toggle.addEventListener('change', (e) => {
+            if (e.target.checked && !state.bridgeConnected) {
+                alert("Shark Bridge nije povezan! Pokreni 'node server.js' u bridge folderu.");
+                e.target.checked = false;
+                return;
+            }
+            state.liveMode = e.target.checked;
+            localStorage.setItem('SHARK_LIVEMODE', state.liveMode);
+            logAction(`TRADING MODE: ${state.liveMode ? 'LIVE (REAL MONEY)' : 'SIMULATION'}`, state.liveMode ? 'ERROR' : 'INFO');
+        });
+    }
+}
+
+async function checkBridgeStatus() {
+    try {
+        const res = await fetch('http://localhost:3000/api/account');
+        state.bridgeConnected = res.ok;
+        if (state.liveMode && res.ok) {
+            const data = await res.json();
+            // Sync real balance (find USDT)
+            const usdt = data.balances.find(b => b.asset === 'USDT');
+            if (usdt) state.balance = parseFloat(usdt.free);
+        }
+    } catch (e) {
+        state.bridgeConnected = false;
+        if (state.liveMode) {
+            state.liveMode = false;
+            document.getElementById('liveModeToggle').checked = false;
+            logAction("VEZA S BRIDGE-OM IZGUBLJENA. LIVE MODE ugašen.", "ERROR");
+        }
+    }
+    updateBridgeUI();
+}
+
+function updateBridgeUI() {
+    const el = document.getElementById('bridgeStatus');
+    if (!el) return;
+    const msg = el.querySelector('.status-msg');
+
+    if (state.bridgeConnected) {
+        el.className = 'bridge-status connected';
+        msg.innerText = 'CONNECTED';
+    } else {
+        el.className = 'bridge-status';
+        msg.innerText = 'DISCONNECTED';
+    }
+}
 
 function initAutoTrade() {
     const toggle = document.getElementById('autoTradeToggle');
     if (toggle) {
+        toggle.checked = state.autoTrade;
         toggle.addEventListener('change', (e) => {
             state.autoTrade = e.target.checked;
+            localStorage.setItem('SHARK_AUTOTRADE', state.autoTrade);
             logAction(`AI Auto-Trade: ${state.autoTrade ? 'AKTIVIRAN' : 'DEAKTIVIRAN'}`, "INFO");
         });
     }
@@ -94,37 +162,56 @@ function closeModal() {
     document.getElementById('tradeModal').classList.remove('active');
 }
 
-function executeTrade() {
+async function executeTrade() {
     const amountUSDT = parseFloat(document.getElementById('tradeAmount').value);
     if (!amountUSDT || amountUSDT <= 0) return alert("Unesite ispravan iznos.");
 
     const price = state.prices[activeTrade.symbol]?.price;
     if (!price) return alert("Cijena nije dostupna.");
 
-    if (activeTrade.type === 'buy') {
-        if (amountUSDT > state.balance) return alert("Nedovoljno USDT balansa.");
-
-        state.balance -= amountUSDT;
-        const coinAmount = amountUSDT / price;
-
-        state.holdings[activeTrade.symbol] = (state.holdings[activeTrade.symbol] || 0) + coinAmount;
-        logAction(`Kupljeno ${coinAmount.toFixed(4)} ${activeTrade.symbol.replace('USDT', '')} po cijeni ${formatCurrency(price)}`, "BUY");
+    if (state.liveMode) {
+        // LIVE TRADING EXECUTION
+        try {
+            const res = await fetch('http://localhost:3000/api/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: activeTrade.symbol,
+                    side: activeTrade.type,
+                    quoteOrderQty: amountUSDT.toFixed(2)
+                })
+            });
+            const data = await res.json();
+            if (data.orderId) {
+                logAction(`LIVE MANUAL TRADED: ${activeTrade.type.toUpperCase()} ${activeTrade.symbol}`, "BUY");
+                closeModal();
+            } else {
+                alert("Greška kod izvršenja: " + (data.error?.msg || "Nepoznata greška"));
+            }
+        } catch (e) {
+            alert("Veza s Bridge serverom nije uspjela!");
+        }
     } else {
-        // SELL
-        const currentHolding = state.holdings[activeTrade.symbol] || 0;
-        const coinToSell = amountUSDT / price;
-
-        if (coinToSell > currentHolding) return alert("Nemate dovoljno kovanica za prodaju.");
-
-        state.balance += amountUSDT;
-        state.holdings[activeTrade.symbol] -= coinToSell;
-        logAction(`Prodano ${coinToSell.toFixed(4)} ${activeTrade.symbol.replace('USDT', '')} po cijeni ${formatCurrency(price)}`, "SELL");
+        // SIMULATION LOGIC
+        if (activeTrade.type === 'buy') {
+            if (amountUSDT > state.balance) return alert("Nedovoljno USDT balansa.");
+            state.balance -= amountUSDT;
+            const coinAmount = amountUSDT / price;
+            state.holdings[activeTrade.symbol] = (state.holdings[activeTrade.symbol] || 0) + coinAmount;
+            logAction(`Kupljeno ${coinAmount.toFixed(4)} ${activeTrade.symbol.replace('USDT', '')} po cijeni ${formatCurrency(price)}`, "BUY");
+        } else {
+            const currentHolding = state.holdings[activeTrade.symbol] || 0;
+            const coinToSell = amountUSDT / price;
+            if (coinToSell > currentHolding) return alert("Nemate dovoljno kovanica za prodaju.");
+            state.balance += amountUSDT;
+            state.holdings[activeTrade.symbol] -= coinToSell;
+            logAction(`Prodano ${coinToSell.toFixed(4)} ${activeTrade.symbol.replace('USDT', '')} po cijeni ${formatCurrency(price)}`, "SELL");
+        }
+        saveState();
+        updateUI();
+        renderHoldings();
+        closeModal();
     }
-
-    saveState();
-    updateUI();
-    renderHoldings();
-    closeModal();
 }
 
 function saveState() {
@@ -150,6 +237,7 @@ async function fetchPrices() {
 
         updatePriceCards();
         analyzeMarket();
+        updateUI(); // Osvježi Net Worth (Ukupnu vrijednost)
     } catch (err) {
         console.error("Shark: Greška pri dohvaćanju cijena", err);
     }
@@ -243,11 +331,11 @@ function runAutoTradeAgent() {
         const coin = state.prices[symbol];
         if (!coin) return;
 
-        // STRATEGY: Buy the Dip (-4%) + Good Sentiment (>50)
+        // STRATEGY (v0.6): Buy the Dip (-1.5%) + Good Sentiment (>45)
         const sentiment = state.sentiment[symbol] || 50;
-        if (coin.change < -4 && sentiment >= 50 && state.balance >= 100) {
+        if (coin.change < -1.5 && sentiment >= 45 && state.balance >= 100) {
             const currentHolding = state.holdings[symbol] || 0;
-            if (currentHolding === 0) {
+            if (currentHolding < 0.0001) { // Buy if not holding
                 autoExecuteTrade(symbol, 'buy', 100);
                 lastTradeTime = now;
             }
@@ -270,21 +358,43 @@ function runAutoTradeAgent() {
     });
 }
 
-function autoExecuteTrade(symbol, type, amountUSDT, reason = "") {
-    const price = state.prices[symbol].price;
-    if (type === 'buy') {
-        state.balance -= amountUSDT;
-        const coinAmount = amountUSDT / price;
-        state.holdings[symbol] = (state.holdings[symbol] || 0) + coinAmount;
-        logAction(`AI: AUTOMATSKA KUPNJA ${coinAmount.toFixed(4)} ${symbol.replace('USDT', '')}`, "BUY");
+async function autoExecuteTrade(symbol, type, amountUSDT, reason = "") {
+    if (state.liveMode) {
+        try {
+            const res = await fetch('http://localhost:3000/api/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: symbol,
+                    side: type,
+                    quoteOrderQty: amountUSDT.toFixed(2)
+                })
+            });
+            const data = await res.json();
+            if (data.orderId) {
+                logAction(`LIVE REAL TRADED: ${type.toUpperCase()} ${symbol}`, "BUY");
+            } else {
+                logAction(`LIVE ORDER FAILED: ${JSON.stringify(data.error)}`, "ERROR");
+            }
+        } catch (e) {
+            logAction(`LIVE BRIDGE ERROR: ${e.message}`, "ERROR");
+        }
     } else {
-        state.balance += amountUSDT;
-        state.holdings[symbol] = 0;
-        logAction(`AI: AUTOMATSKA PRODAJA ${reason ? '(' + reason + ')' : ''} ${symbol.replace('USDT', '')}`, "SELL");
+        const price = state.prices[symbol].price;
+        if (type === 'buy') {
+            state.balance -= amountUSDT;
+            const coinAmount = amountUSDT / price;
+            state.holdings[symbol] = (state.holdings[symbol] || 0) + coinAmount;
+            logAction(`AI: AUTOMATSKA KUPNJA ${coinAmount.toFixed(4)} ${symbol.replace('USDT', '')}`, "BUY");
+        } else {
+            state.balance += amountUSDT;
+            state.holdings[symbol] = 0;
+            logAction(`AI: AUTOMATSKA PRODAJA ${reason ? '(' + reason + ')' : ''} ${symbol.replace('USDT', '')}`, "SELL");
+        }
+        saveState();
+        updateUI();
+        renderHoldings();
     }
-    saveState();
-    updateUI();
-    renderHoldings();
 }
 
 // --- NEWS ENGINE ---
@@ -374,9 +484,17 @@ function renderHoldings() {
 
 function updateUI() {
     const balanceEl = document.getElementById('totalBalance');
-    if (balanceEl) {
-        balanceEl.innerText = state.balance.toLocaleString('hr-HR', { minimumFractionDigits: 2 }) + ' USDT';
-    }
+    if (!balanceEl) return;
+
+    // Calculate Net Worth: USDT Balance + Value of all Holdings
+    let totalValue = state.balance;
+    Object.keys(state.holdings).forEach(symbol => {
+        const amount = state.holdings[symbol];
+        const price = state.prices[symbol]?.price || 0;
+        totalValue += amount * price;
+    });
+
+    balanceEl.innerText = totalValue.toLocaleString('hr-HR', { minimumFractionDigits: 2 }) + ' USDT';
 }
 
 function formatCurrency(val) {

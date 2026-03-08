@@ -1,33 +1,28 @@
-# Shark Trader 🦈📈🪙
+# Shark Trader AI 🦈📈💰
 
-Dobrodošli u Shark Trader - AI-pokretani sistem za trgovanje kriptovalutama.
+**Shark Trader** is a premium AI-driven crypto trading simulator and live bot interface. It combines real-time data from Binance with AI sentiment analysis to hunt for profitable trades.
 
-## 🖼️ Vizualni Koncept
-Pogledaj [dashboard_mockup.png](dashboard_mockup.png) u ovom folderu da vidiš kako sam zamislio sučelje (High-tech Dark Mode, narančasti akcenti).
+## ✨ Features
+- **AI Auto-Trade:** Smart bot with "Buy the Dip" logic.
+- **Risk Management:** Built-in Stop Loss (-10%) and Take Profit (+15%).
+- **Sentiment Analysis:** Real-time news scanning for market tone.
+- **Live Bridge:** Secure local server to trade with real money on Binance.
+- **Mobile PWA:** Installable on iOS and Android.
 
----
+## 🚀 Getting Started
 
-## 🚀 Plan Implementacije (Faza 1: Simulator)
+### 1. Simulation Mode
+Simply open `index.html` in your browser. You start with **$1,000 virtual USDT**.
 
-Cilj ove faze je testiranje AI strategija bez rizika, koristeći virtualni balans od **$1,000 USDT**.
+### 2. Live Mode (Real Money)
+1. Navigate to `/bridge` folder.
+2. Rename `.env.example` to `.env` and add your **Binance API Keys**.
+3. Run `npm install` and then `npm start`.
+4. Toggle **LIVE MODE** in the app.
 
-### Ključne komponente:
-1. **Shark Pulse:** AI indikator stanja tržišta (Bullish/Bearish).
-2. **Virtualni novčanik:** Praćenje profita/gubitka simuliranih trgovina.
-3. **AI Decisions:** Prikaz "razmišljanja" bota (zašto je kupio ili prodao).
-
-### Tehnički preduvjeti (za kasnije):
-- **Binance API** (za pravu trgovinu).
-- **Početni kapital** u USDT kovanicama.
-- **Sigurnosne dozvole** (samo trgovanje, bez isplate).
-
----
-
-## 📂 Struktura Projekta
-- `README.md` - Ovaj dokument.
-- `dashboard_mockup.png` - Vizualni prikaz sučelja.
-- `app.js`, `index.html`, `style.css` - (U izradi).
+## 🛡️ Security
+- API keys are stored locally in your `.env` file.
+- **NEVER** enable "Withdrawals" permission on your Binance API key.
 
 ---
-
-🦈 *Shark Trader - Lovimo valove, punimo novčanike.*
+*Created with ❤️ by Shark Trader Team*

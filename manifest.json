@@ -1,0 +1,18 @@
+{
+    "name": "Shark Trader AI",
+    "short_name": "SharkTrader",
+    "description": "AI Crypto Trading Bot & Simulator",
+    "start_url": "index.html",
+    "display": "standalone",
+    "background_color": "#010103",
+    "theme_color": "#E67E22",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "logo.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

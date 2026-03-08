@@ -10,6 +10,13 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#E67E22">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="logo.png">
 </head>
 
 <body>
@@ -17,9 +24,17 @@
 
     <nav class="navbar">
         <div class="logo">
-            SHARK<span class="accent">TRADER v0.5 PRO</span>
+            SHARK<span class="accent">TRADER v0.8 LIVE</span>
         </div>
         <div class="nav-controls">
+            <div id="bridgeStatus" class="bridge-status">
+                <i class="fas fa-link"></i> BRIDGE: <span class="status-msg">DISCONNECTED</span>
+            </div>
+            <label class="switch-container">
+                <span class="switch-label">LIVE MODE</span>
+                <input type="checkbox" id="liveModeToggle">
+                <span class="slider"></span>
+            </label>
             <label class="switch-container">
                 <span class="switch-label">AUTO-TRADE</span>
                 <input type="checkbox" id="autoTradeToggle">
