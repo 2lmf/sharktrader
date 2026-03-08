@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.12 PRO+) ---
+// --- SHARK TRADER SIMULATOR (v0.13 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -92,6 +92,11 @@ function initLiveMode() {
             state.liveMode = e.target.checked;
             localStorage.setItem('SHARK_LIVEMODE', state.liveMode);
             logAction(`TRADING MODE: ${state.liveMode ? 'LIVE (REAL MONEY)' : 'SIMULATION'}`, state.liveMode ? 'ERROR' : 'INFO');
+
+            // Immediately sync and update
+            checkBridgeStatus();
+            updateUI();
+            renderHoldings();
         });
     }
 }
@@ -102,9 +107,25 @@ async function checkBridgeStatus() {
         state.bridgeConnected = res.ok;
         if (state.liveMode && res.ok) {
             const data = await res.json();
+
             // Sync real balance (find USDT)
             const usdtAsset = data.balances.find(b => b.asset === 'USDT');
             state.balance = usdtAsset ? parseFloat(usdtAsset.free) : 0.00;
+
+            // Sync real holdings for tracked coins
+            let realHoldings = {};
+            CONFIG.COINS.forEach(symbol => {
+                const asset = symbol.replace('USDT', '');
+                const binanceAsset = data.balances.find(b => b.asset === asset);
+                if (binanceAsset && parseFloat(binanceAsset.free) > 0.000001) {
+                    realHoldings[symbol] = parseFloat(binanceAsset.free);
+                }
+            });
+            state.holdings = realHoldings;
+        } else if (!state.liveMode) {
+            // Restore virtual state from storage if needed
+            state.balance = parseFloat(localStorage.getItem('SHARK_WALLET')) || CONFIG.INITIAL_BALANCE;
+            state.holdings = JSON.parse(localStorage.getItem('SHARK_HOLDINGS')) || {};
         }
     } catch (e) {
         state.bridgeConnected = false;
