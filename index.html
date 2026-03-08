@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="hr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shark Trader | AI Crypto Bot</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="grid-overlay"></div>
+
+    <nav class="navbar">
+        <div class="logo">
+            SHARK<span class="accent">TRADER v0.1</span>
+        </div>
+        <div class="wallet-stat">
+            <span class="label">VIRTUAL BALANCE</span>
+            <span class="value" id="totalBalance">1.250,00 USDT</span>
+        </div>
+    </nav>
+
+    <main class="container">
+        <!-- Dashboard Header -->
+        <header class="header">
+            <div class="pulse-card glass">
+                <div class="pulse-header">
+                    <span class="label">SHARK PULSE</span>
+                    <div class="dot green"></div>
+                </div>
+                <div class="pulse-value accent" id="marketSentiment">BULLISH</div>
+                <p class="pulse-desc">Tržište pokazuje pozitivan trend (BTC +2.4%)</p>
+            </div>
+
+            <div class="stat-grid">
+                <div class="mini-card glass">
+                    <span class="label">PENDING TRADES</span>
+                    <span class="value">0</span>
+                </div>
+                <div class="mini-card glass">
+                    <span class="label">TOTAL PROFIT</span>
+                    <span class="value success">+0.00%</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Live Market Section -->
+        <section class="market-section">
+            <div class="section-title">
+                <i class="fas fa-chart-line"></i> LIVE MARKET (BINANCE FEED)
+            </div>
+            <div class="price-cards" id="priceCards">
+                <!-- BTC Card -->
+                <div class="price-card glass" data-symbol="BTCUSDT">
+                    <div class="coin-info">
+                        <i class="fab fa-bitcoin"></i>
+                        <div>
+                            <div class="symbol">BTC/USDT</div>
+                            <div class="name">Bitcoin</div>
+                        </div>
+                    </div>
+                    <div class="coin-price-container">
+                        <div class="coin-price" id="btcPrice">--.--- $</div>
+                        <div class="coin-change success" id="btcChange">+0.00%</div>
+                    </div>
+                    <div class="trade-actions">
+                        <button class="btn-trade buy" onclick="openTradeModal('BTCUSDT', 'buy')">BUY</button>
+                        <button class="btn-trade sell" onclick="openTradeModal('BTCUSDT', 'sell')">SELL</button>
+                    </div>
+                </div>
+                <!-- ETH Card -->
+                <div class="price-card glass" data-symbol="ETHUSDT">
+                    <div class="coin-info">
+                        <i class="fab fa-ethereum"></i>
+                        <div>
+                            <div class="symbol">ETH/USDT</div>
+                            <div class="name">Ethereum</div>
+                        </div>
+                    </div>
+                    <div class="coin-price-container">
+                        <div class="coin-price" id="ethPrice">-.--- $</div>
+                        <div class="coin-change error" id="ethChange">-0.00%</div>
+                    </div>
+                    <div class="trade-actions">
+                        <button class="btn-trade buy" onclick="openTradeModal('ETHUSDT', 'buy')">BUY</button>
+                        <button class="btn-trade sell" onclick="openTradeModal('ETHUSDT', 'sell')">SELL</button>
+                    </div>
+                </div>
+                <!-- SOL Card -->
+                <div class="price-card glass" data-symbol="SOLUSDT">
+                    <div class="coin-info">
+                        <i class="fas fa-s"></i>
+                        <div>
+                            <div class="symbol">SOL/USDT</div>
+                            <div class="name">Solana</div>
+                        </div>
+                    </div>
+                    <div class="coin-price-container">
+                        <div class="coin-price" id="solPrice">-.-- $</div>
+                        <div class="coin-change" id="solChange">+0.00%</div>
+                    </div>
+                    <div class="trade-actions">
+                        <button class="btn-trade buy" onclick="openTradeModal('SOLUSDT', 'buy')">BUY</button>
+                        <button class="btn-trade sell" onclick="openTradeModal('SOLUSDT', 'sell')">SELL</button>
+                    </div>
+                </div>
+                <!-- BNB Card -->
+                <div class="price-card glass" data-symbol="BNBUSDT">
+                    <div class="coin-info">
+                        <i class="fas fa-coins"></i>
+                        <div>
+                            <div class="symbol">BNB/USDT</div>
+                            <div class="name">Binance Coin</div>
+                        </div>
+                    </div>
+                    <div class="coin-price-container">
+                        <div class="coin-price" id="bnbPrice">-.-- $</div>
+                        <div class="coin-change" id="bnbChange">+0.00%</div>
+                    </div>
+                    <div class="trade-actions">
+                        <button class="btn-trade buy" onclick="openTradeModal('BNBUSDT', 'buy')">BUY</button>
+                        <button class="btn-trade sell" onclick="openTradeModal('BNBUSDT', 'sell')">SELL</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Portfolio Section -->
+        <section class="portfolio-section">
+            <div class="section-title">
+                <i class="fas fa-wallet"></i> YOUR HOLDINGS
+            </div>
+            <div class="holdings-grid" id="holdingsGrid">
+                <!-- Populated by JS -->
+                <div class="empty-holdings">Vaš portfelj je prazan.</div>
+            </div>
+        </section>
+
+        <!-- Bot Activity -->
+        <section class="activity-section">
+            <div class="section-title">
+                <i class="fas fa-robot"></i> AI BOT DECISIONS
+            </div>
+            <div class="activity-log" id="botLog">
+                <div class="log-item">
+                    <span class="time">22:45</span>
+                    <span class="type info">INIT</span>
+                    <span class="msg">Shark Trader Simulator pokrenut sa $1,000 USDT.</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Trade Modal -->
+    <div class="modal" id="tradeModal">
+        <div class="modal-content glass">
+            <h3 id="modalTitle">TRADE BTC</h3>
+            <div class="form-group">
+                <label>Iznos (USDT):</label>
+                <input type="number" id="tradeAmount" placeholder="0.00" class="form-control">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">ODUSTANI</button>
+                <button class="btn-primary" id="btnExecuteTrade">POTVRDI</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
