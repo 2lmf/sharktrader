@@ -308,6 +308,13 @@ input:checked+.slider:before {
     font-weight: 600;
 }
 
+.coin-sentiment {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-top: 5px;
+}
+
 /* Trade Actions */
 .trade-actions {
     display: flex;

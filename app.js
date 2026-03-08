@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.1) ---
+// --- SHARK TRADER SIMULATOR (v0.5 PRO) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -21,12 +21,21 @@ const COIN_METADATA = {
     'FETUSDT': { name: 'Fetch.ai', icon: 'fas fa-brain' }
 };
 
+const SHARK_AI = {
+    BULL_WORDS: ['bull', 'buy', 'surge', 'pump', 'profit', 'high', 'moon', 'adopt', 'partnership'],
+    BEAR_WORDS: ['bear', 'sell', 'crash', 'dump', 'hack', 'scam', 'drop', 'ban', 'fear', 'lawsuit'],
+    STOP_LOSS: -10, // Max -10% drop
+    TAKE_PROFIT: 15 // Sell at +15%
+};
+
 const savedWallet = localStorage.getItem('SHARK_WALLET');
 let state = {
     balance: savedWallet !== null ? parseFloat(savedWallet) : CONFIG.INITIAL_BALANCE,
     holdings: JSON.parse(localStorage.getItem('SHARK_HOLDINGS')) || {},
     prices: {},
-    autoTrade: false
+    autoTrade: false,
+    news: [],
+    sentiment: {}
 };
 
 let activeTrade = { symbol: null, type: null };
@@ -168,6 +177,7 @@ function renderPriceCards() {
             <div class="coin-price-container">
                 <div class="coin-price" id="${coinPrefix}Price">--.--- $</div>
                 <div class="coin-change" id="${coinPrefix}Change">+0.00%</div>
+                <div class="coin-sentiment" id="${coinPrefix}Sentiment">Sentiment: --%</div>
             </div>
             <div class="trade-actions">
                 <button class="btn-trade buy" onclick="openTradeModal('${symbol}', 'buy')">BUY</button>
@@ -178,17 +188,47 @@ function renderPriceCards() {
     });
 }
 
+function calculateCoinSentiment(symbol) {
+    let score = 50; // Neutral starting
+    const search = symbol.replace('USDT', '').toLowerCase();
+
+    state.news.forEach(item => {
+        const text = (item.title + item.body).toLowerCase();
+        if (text.includes(search)) {
+            SHARK_AI.BULL_WORDS.forEach(w => { if (text.includes(w)) score += 5; });
+            SHARK_AI.BEAR_WORDS.forEach(w => { if (text.includes(w)) score -= 8; });
+        }
+    });
+
+    return Math.min(100, Math.max(0, score));
+}
+
 function updatePriceCards() {
     CONFIG.COINS.forEach(symbol => {
         const coinPrefix = symbol.replace('USDT', '').toLowerCase();
         const priceEl = document.getElementById(`${coinPrefix}Price`);
         const changeEl = document.getElementById(`${coinPrefix}Change`);
+        const sentEl = document.getElementById(`${coinPrefix}Sentiment`);
 
         const coinData = state.prices[symbol];
         if (coinData && priceEl && changeEl) {
             priceEl.innerText = formatCurrency(coinData.price);
             changeEl.innerText = `${coinData.change > 0 ? '+' : ''}${coinData.change.toFixed(2)}%`;
             changeEl.className = `coin-change ${coinData.change >= 0 ? 'success' : 'error'}`;
+
+            // Pro Sentiment logic
+            const sentiment = calculateCoinSentiment(symbol);
+            state.sentiment[symbol] = sentiment;
+
+            if (sentEl) {
+                sentEl.innerText = `Sentiment: ${sentiment}%`;
+                sentEl.style.color = sentiment > 60 ? 'var(--success)' : (sentiment < 40 ? 'var(--error)' : 'var(--text-muted)');
+            }
+
+            const cardEl = document.getElementById(`card-${symbol}`);
+            if (cardEl) {
+                cardEl.style.borderRight = `4px solid ${sentiment > 60 ? 'var(--success)' : (sentiment < 40 ? 'var(--error)' : 'var(--glass-border)')}`;
+            }
         }
     });
 }
@@ -203,26 +243,34 @@ function runAutoTradeAgent() {
         const coin = state.prices[symbol];
         if (!coin) return;
 
-        // STRATEGY: Buy the Dip (-4%)
-        if (coin.change < -4 && state.balance >= 100) {
+        // STRATEGY: Buy the Dip (-4%) + Good Sentiment (>50)
+        const sentiment = state.sentiment[symbol] || 50;
+        if (coin.change < -4 && sentiment >= 50 && state.balance >= 100) {
             const currentHolding = state.holdings[symbol] || 0;
-            if (currentHolding === 0) { // Only buy if we don't hold already (simple bot)
+            if (currentHolding === 0) {
                 autoExecuteTrade(symbol, 'buy', 100);
                 lastTradeTime = now;
             }
         }
 
-        // STRATEGY: Sell for Profit (+3%)
+        // AUTO-SELL LOGIC (PRO)
         const currentHolding = state.holdings[symbol] || 0;
-        if (currentHolding > 0 && coin.change > 3) {
-            const valueInUSDT = currentHolding * coin.price;
-            autoExecuteTrade(symbol, 'sell', valueInUSDT);
-            lastTradeTime = now;
+        if (currentHolding > 0) {
+            // Take Profit (+15%)
+            if (coin.change > SHARK_AI.TAKE_PROFIT) {
+                autoExecuteTrade(symbol, 'sell', currentHolding * coin.price, "PROFIT");
+                lastTradeTime = now;
+            }
+            // Stop Loss (-10%)
+            else if (coin.change < SHARK_AI.STOP_LOSS) {
+                autoExecuteTrade(symbol, 'sell', currentHolding * coin.price, "STOP LOSS");
+                lastTradeTime = now;
+            }
         }
     });
 }
 
-function autoExecuteTrade(symbol, type, amountUSDT) {
+function autoExecuteTrade(symbol, type, amountUSDT, reason = "") {
     const price = state.prices[symbol].price;
     if (type === 'buy') {
         state.balance -= amountUSDT;
@@ -231,8 +279,8 @@ function autoExecuteTrade(symbol, type, amountUSDT) {
         logAction(`AI: AUTOMATSKA KUPNJA ${coinAmount.toFixed(4)} ${symbol.replace('USDT', '')}`, "BUY");
     } else {
         state.balance += amountUSDT;
-        state.holdings[symbol] = 0; // Sell all for profit
-        logAction(`AI: AUTOMATSKA PRODAJA (PROFIT) ${symbol.replace('USDT', '')}`, "SELL");
+        state.holdings[symbol] = 0;
+        logAction(`AI: AUTOMATSKA PRODAJA ${reason ? '(' + reason + ')' : ''} ${symbol.replace('USDT', '')}`, "SELL");
     }
     saveState();
     updateUI();
@@ -244,6 +292,7 @@ async function fetchNews() {
     try {
         const response = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN');
         const data = await response.json();
+        state.news = data.Data;
         renderNews(data.Data.slice(0, 6));
     } catch (err) {
         console.error("Shark: Greška pri dohvaćanju vijesti", err);
