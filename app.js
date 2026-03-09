@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.17 PRO+) ---
+// --- SHARK TRADER SIMULATOR (v0.18 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -131,6 +131,14 @@ async function checkBridgeStatus() {
                 }
             });
             state.holdings = realHoldings;
+
+            // Immediate UI Update
+            updateUI();
+            renderHoldings();
+
+            if (state.balance === 0 && !data.balances.find(b => b.asset === 'USDC')) {
+                console.warn("USDC NOT FOUND in Binance account! Checking other assets...");
+            }
         } else if (!state.liveMode) {
             // Restore virtual state from storage if needed
             state.balance = parseFloat(localStorage.getItem('SHARK_WALLET')) || CONFIG.INITIAL_BALANCE;
