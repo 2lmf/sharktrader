@@ -410,7 +410,7 @@ input:checked+.toggle-switch::after {
 
 .price-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 15px;
     margin-bottom: 30px;
 }
@@ -425,8 +425,9 @@ input:checked+.toggle-switch::after {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 20px;
+    padding: 20px 25px;
     gap: 15px;
+    min-height: 100px;
 }
 
 .coin-info {
@@ -460,7 +461,8 @@ input:checked+.toggle-switch::after {
 .coin-price {
     font-family: var(--font-header);
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.2rem;
+    color: #fff;
 }
 
 .coin-change {
@@ -482,14 +484,14 @@ input:checked+.toggle-switch::after {
 }
 
 .btn-trade {
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 10px 16px;
+    border-radius: 10px;
     border: none;
     font-family: var(--font-header);
-    font-size: 0.7rem;
-    font-weight: 700;
+    font-size: 0.75rem;
+    font-weight: 900;
     cursor: pointer;
-    transition: transform 0.2s, background 0.2s;
+    transition: all 0.2s;
 }
 
 .btn-trade.buy {
