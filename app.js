@@ -195,13 +195,13 @@ async function checkBridgeStatus() {
                 logAction(`PRONAĐEN BALANS: ${state.balance.toFixed(2)} USDC`, "SUCCESS");
             } else if (usdtAsset && parseFloat(usdtAsset.free) > 0) {
                 state.balance = parseFloat(usdtAsset.free);
-                logAction(`PRONAĐEN OLD BALANS: ${state.balance.toFixed(2)} USDT (Preporuka: Pretvori u USDC)`, "WARNING");
+                logAction(`PRONAĐEN OLD BALANS: ${state.balance.toFixed(2)} USDC (Preporuka: Pretvori u USDC)`, "WARNING");
             } else if (usdAsset && parseFloat(usdAsset.free) > 0) {
                 state.balance = 0;
                 logAction(`PRONAĐENO: ${parseFloat(usdAsset.free).toFixed(2)} USD. MORAŠ pretvoriti u USDC na Binanceu!`, "ERROR");
             } else {
                 state.balance = 0;
-                logAction("Nije pronađen dostupan balans (USDC/USDT/USD) na Spot računu.", "INFO");
+                logAction("Nije pronađen dostupan balans (USDC/USD) na Spot računu.", "INFO");
             }
 
             // Sync real holdings for tracked coins
