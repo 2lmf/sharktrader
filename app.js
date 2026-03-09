@@ -450,7 +450,7 @@ function updatePriceCards() {
 
 // --- AI BRAIN (AUTO-TRADE) ---
 let lastTradeTime = 0;
-function runAutoTradeAgent() {
+async function runAutoTradeAgent() {
     const now = Date.now();
     if (now - lastTradeTime < 10000) return; // limit trade rate
 
@@ -467,12 +467,9 @@ function runAutoTradeAgent() {
     // Kupuje sve do +2.5% ako je sentiment dobar. Grize odmah!
     const entryThreshold = fngValue < 25 ? 5.0 : 2.5;
 
-
-
-
-    CONFIG.COINS.forEach(symbol => {
+    for (const symbol of CONFIG.COINS) {
         const coin = state.prices[symbol];
-        if (!coin) return;
+        if (!coin) continue;
 
         const sentiment = state.sentiment[symbol] || 50;
 
@@ -483,23 +480,28 @@ function runAutoTradeAgent() {
         if (coin.change < entryThreshold && sentiment >= 45 && state.balance >= minBalance) {
             const currentHolding = state.holdings[symbol] || 0;
             if (currentHolding < 0.0001) {
-                autoExecuteTrade(symbol, 'buy', tradeAmount, fngValue < 25 ? "EXTREME FEAR" : "DIP");
+                // Odmah "rezerviramo" balans lokalno da spriječimo duple trejdove u istom ciklusu
+                state.balance -= tradeAmount;
+                await autoExecuteTrade(symbol, 'buy', tradeAmount, fngValue < 25 ? "EXTREME FEAR" : "DIP");
                 lastTradeTime = now;
+                updateUI(); // Osvježi UI odmah
             }
         }
 
         const currentHolding = state.holdings[symbol] || 0;
         if (currentHolding > 0) {
             if (coin.change > SHARK_AI.TAKE_PROFIT) {
-                autoExecuteTrade(symbol, 'sell', currentHolding * coin.price, "PROFIT");
+                const sellVal = currentHolding * coin.price;
+                await autoExecuteTrade(symbol, 'sell', sellVal, "PROFIT");
                 lastTradeTime = now;
             }
             else if (coin.change < SHARK_AI.STOP_LOSS) {
-                autoExecuteTrade(symbol, 'sell', currentHolding * coin.price, "STOP LOSS");
+                const sellVal = currentHolding * coin.price;
+                await autoExecuteTrade(symbol, 'sell', sellVal, "STOP LOSS");
                 lastTradeTime = now;
             }
         }
-    });
+    }
 }
 
 async function autoExecuteTrade(symbol, type, amountUSDC, reason = "") {
