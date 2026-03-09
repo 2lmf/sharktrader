@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.20 PRO+) ---
+// --- SHARK TRADER SIMULATOR (v0.25 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -42,7 +42,8 @@ let state = {
     bridgeUrl: localStorage.getItem('SHARK_BRIDGE_URL') || 'http://localhost:3000',
     bridgeConnected: false,
     news: [],
-    sentiment: {}
+    sentiment: {},
+    marketWisdom: null
 };
 
 let activeTrade = { symbol: null, type: null };
@@ -73,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(() => {
         fetchPrices();
         checkBridgeStatus();
+        fetchMarketWisdom();
         if (state.autoTrade) runAutoTradeAgent();
         updateUI();
         renderHoldings();
@@ -128,6 +130,54 @@ function initSettings() {
     };
 }
 
+async function fetchMarketWisdom() {
+    if (!state.bridgeConnected) return;
+    try {
+        const res = await fetch(`${state.bridgeUrl}/api/market-wisdom`);
+        if (res.ok) {
+            state.marketWisdom = await res.json();
+            renderMarketWisdom();
+        }
+    } catch (e) {
+        console.error("Wisdom Fetch Error:", e);
+    }
+}
+
+function renderMarketWisdom() {
+    if (!state.marketWisdom) return;
+    const { fng, whales, github } = state.marketWisdom;
+
+    // 1. Fear & Greed
+    const fngCard = document.getElementById('fngCard');
+    if (fngCard) {
+        fngCard.querySelector('.fng-value').innerText = fng.value;
+        const label = fngCard.querySelector('.fng-label');
+        label.innerText = fng.classification;
+        label.style.color = fng.value > 70 ? 'var(--error)' : fng.value < 30 ? 'var(--success)' : 'var(--accent)';
+    }
+
+    // 2. Whales
+    const whaleList = document.getElementById('whaleList');
+    if (whaleList) {
+        whaleList.innerHTML = whales.map(w => `
+            <div class="whale-item">
+                <span class="type ${w.type.toLowerCase()}">${w.type}</span>
+                <span class="amount">${w.amount}</span>
+                <span class="time">${w.time}</span>
+            </div>
+        `).join('');
+    }
+
+    // 3. GitHub (Builder Alpha)
+    const githubStats = document.getElementById('githubStats');
+    if (githubStats) {
+        githubStats.innerHTML = `
+            <div class="repo-stat"><span>BTC Core:</span> <span class="status">${github.bitcoin.status}</span></div>
+            <div class="repo-stat"><span>ETH Go:</span> <span class="status">${github.ethereum.status}</span></div>
+            <div class="repo-stat"><span>SOL Dev:</span> <span class="status">${github.solana.status}</span></div>
+        `;
+    }
+}
 async function checkBridgeStatus() {
     try {
         const res = await fetch(`${state.bridgeUrl}/api/account`);
@@ -395,29 +445,42 @@ function runAutoTradeAgent() {
     const now = Date.now();
     if (now - lastTradeTime < 10000) return; // limit trade rate
 
+    // HYPERDRIVE (v0.25): Contrarian Logic
+    const fngValue = state.marketWisdom?.fng?.value || 50;
+
+    // Inverse Cramer / Extreme Greed Protection
+    if (fngValue > 80) {
+        if (now % 60000 < 5000) logAction("EXTREME GREED detected! Shark is staying in deep water (No Buying).", "WARNING");
+        return;
+    }
+
+    // Blood in the Streets / Extreme Fear Opportunity
+    const entryThreshold = fngValue < 25 ? -0.5 : -1.5;
+
     CONFIG.COINS.forEach(symbol => {
         const coin = state.prices[symbol];
         if (!coin) return;
 
-        // STRATEGY (v0.6): Buy the Dip (-1.5%) + Good Sentiment (>45)
         const sentiment = state.sentiment[symbol] || 50;
-        if (coin.change < -1.5 && sentiment >= 45 && state.balance >= 100) {
+
+        // Dynamic Min Balance (Live Mode uses 15 USDC, Simulation 100 USDT)
+        const minBalance = state.liveMode ? 15 : 100;
+        const tradeAmount = state.liveMode ? 15 : 100;
+
+        if (coin.change < entryThreshold && sentiment >= 45 && state.balance >= minBalance) {
             const currentHolding = state.holdings[symbol] || 0;
-            if (currentHolding < 0.0001) { // Buy if not holding
-                autoExecuteTrade(symbol, 'buy', 100);
+            if (currentHolding < 0.0001) {
+                autoExecuteTrade(symbol, 'buy', tradeAmount, fngValue < 25 ? "EXTREME FEAR" : "DIP");
                 lastTradeTime = now;
             }
         }
 
-        // AUTO-SELL LOGIC (PRO)
         const currentHolding = state.holdings[symbol] || 0;
         if (currentHolding > 0) {
-            // Take Profit (+15%)
             if (coin.change > SHARK_AI.TAKE_PROFIT) {
                 autoExecuteTrade(symbol, 'sell', currentHolding * coin.price, "PROFIT");
                 lastTradeTime = now;
             }
-            // Stop Loss (-10%)
             else if (coin.change < SHARK_AI.STOP_LOSS) {
                 autoExecuteTrade(symbol, 'sell', currentHolding * coin.price, "STOP LOSS");
                 lastTradeTime = now;
@@ -426,25 +489,45 @@ function runAutoTradeAgent() {
     });
 }
 
-async function autoExecuteTrade(symbol, type, amountUSDT, reason = "") {
+async function autoExecuteTrade(symbol, type, amountUSDC, reason = "") {
     const price = state.prices[symbol].price;
-    const fee = amountUSDT * CONFIG.BINANCE_FEE;
+    const fee = amountUSDC * CONFIG.BINANCE_FEE;
 
     if (state.liveMode) {
-        // ... live logic
+        try {
+            logAction(`LIVE ${type.toUpperCase()}: Pokušavam izvršiti red za ${symbol}...`, "INFO");
+            const res = await fetch(`${state.bridgeUrl}/api/order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: symbol,
+                    side: type.toUpperCase(),
+                    quoteOrderQty: amountUSDC
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                logAction(`REAL MONEY ${type.toUpperCase()} USPJEŠAN: ${symbol} (${reason})`, "SUCCESS");
+                checkBridgeStatus(); // Refresh balance/holdings from Binance
+            } else {
+                logAction(`BINANCE BROKER GREŠKA: ${data.error?.msg || 'Nepoznata greška'}`, "ERROR");
+            }
+        } catch (e) {
+            logAction(`BRIDGE ERROR: Neuspješan kontakt s mostom.`, "ERROR");
+        }
     } else {
         if (type === 'buy') {
-            state.balance -= (amountUSDT + fee);
-            const coinAmount = amountUSDT / price;
+            state.balance -= (amountUSDC + fee);
+            const coinAmount = amountUSDC / price;
             state.holdings[symbol] = (state.holdings[symbol] || 0) + coinAmount;
             addTradeToHistory(symbol, 'BUY', coinAmount, price, fee, "AI: " + reason);
-            logAction(`AI KUPNJA: ${coinAmount.toFixed(4)} ${symbol.replace('USDT', '')} (Fee: ${fee.toFixed(4)}$)`, "BUY");
+            logAction(`AI KUPNJA: ${coinAmount.toFixed(4)} ${symbol.replace('USDC', '')} (Fee: ${fee.toFixed(4)}$)`, "BUY");
         } else {
-            state.balance += (amountUSDT - fee);
+            state.balance += (amountUSDC - fee);
             const coinAmount = state.holdings[symbol];
             state.holdings[symbol] = 0;
             addTradeToHistory(symbol, 'SELL', coinAmount, price, fee, "AI: " + reason);
-            logAction(`AI PRODAJA: ${symbol.replace('USDT', '')} (Net: ${(amountUSDT - fee).toFixed(2)}$, Fee: ${fee.toFixed(4)}$)`, "SELL");
+            logAction(`AI PRODAJA: ${symbol.replace('USDC', '')} (Net: ${(amountUSDC - fee).toFixed(2)}$, Fee: ${fee.toFixed(4)}$)`, "SELL");
         }
         saveState();
         updateUI();
@@ -456,7 +539,7 @@ async function autoExecuteTrade(symbol, type, amountUSDT, reason = "") {
 function addTradeToHistory(symbol, type, amount, price, fee, context = "") {
     const entry = {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        symbol: symbol.replace('USDT', ''),
+        symbol: symbol.replace('USDC', ''),
         type: type,
         amount: amount,
         price: price,
@@ -524,7 +607,7 @@ function renderNews(news) {
 
 function analyzeMarket() {
     const pulseValue = document.getElementById('marketSentiment');
-    const btc = state.prices['BTCUSDT'];
+    const btc = state.prices['BTCUSDC'];
 
     if (!btc || !pulseValue) return;
 
@@ -568,7 +651,7 @@ function renderHoldings() {
                 <div class="amount">${amount.toFixed(4)}</div>
             </div>
             <div class="holding-value">
-                <span class="val">${totalValue.toLocaleString('hr-HR', { minimumFractionDigits: 2 })} USDT</span>
+                <span class="val">${totalValue.toLocaleString('hr-HR', { minimumFractionDigits: 2 })} USDC</span>
             </div>
         `;
         grid.appendChild(card);

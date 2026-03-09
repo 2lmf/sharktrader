@@ -39,7 +39,7 @@ app.get('/api/account', async (req, res) => {
 
 // --- ENDPOINT: Execute Real Order ---
 app.post('/api/order', async (req, res) => {
-    const { symbol, side, quoteOrderQty } = req.body; // quoteOrderQty uses USDT amount
+    const { symbol, side, quoteOrderQty } = req.body;
 
     try {
         const timestamp = Date.now();
@@ -54,6 +54,39 @@ app.post('/api/order', async (req, res) => {
     } catch (err) {
         console.error("❌ Binance Order Greška:", err.response?.data || err.message);
         res.status(500).json({ error: err.response?.data || err.message });
+    }
+});
+
+// --- ENDPOINT: Market Wisdom (v0.25 Hyperdrive) ---
+app.get('/api/market-wisdom', async (req, res) => {
+    try {
+        // 1. Fear & Greed Index
+        const fngRes = await axios.get('https://api.alternative.me/fng/?format=json');
+        const fngData = fngRes.data.data[0];
+
+        // 2. Mocked Whale & GitHub (Za demo v0.25)
+        // Ovdje bi išla prava integracija sa Whale-Alert.io API-jem
+        const wisdom = {
+            fng: {
+                value: parseInt(fngData.value),
+                classification: fngData.value_classification,
+                timestamp: fngData.timestamp
+            },
+            whales: [
+                { type: 'OUTFLOW', amount: '450 BTC', from: 'Binance', to: 'Unknown Wallet', time: '5m ago' },
+                { type: 'INFLOW', amount: '1200 ETH', from: 'Unknown Wallet', to: 'Coinbase', time: '12m ago' }
+            ],
+            github: {
+                bitcoin: { last_push: '2h ago', status: 'Active' },
+                ethereum: { last_push: '1h ago', status: 'Active' },
+                solana: { last_push: '15m ago', status: 'Active' }
+            }
+        };
+
+        res.json(wisdom);
+    } catch (err) {
+        console.error("❌ Market Wisdom Greška:", err.message);
+        res.status(500).json({ error: "Could not fetch market wisdom" });
     }
 });
 
