@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.26 PRO+) ---
+// --- SHARK TRADER SIMULATOR (v0.27 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -41,6 +41,7 @@ let state = {
     liveMode: savedLiveMode,
     bridgeUrl: localStorage.getItem('SHARK_BRIDGE_URL') || 'http://localhost:3000',
     bridgeConnected: false,
+    initialBalanceLogged: false,
     news: [],
     sentiment: {},
     marketWisdom: null
@@ -192,16 +193,28 @@ async function checkBridgeStatus() {
 
             if (usdcAsset && parseFloat(usdcAsset.free) > 0) {
                 state.balance = parseFloat(usdcAsset.free);
-                logAction(`PRONAĐEN BALANS: ${state.balance.toFixed(2)} USDC`, "SUCCESS");
+                if (!state.initialBalanceLogged) {
+                    logAction(`PRONAĐEN BALANS: ${state.balance.toFixed(2)} USDC`, "SUCCESS");
+                    state.initialBalanceLogged = true;
+                }
             } else if (usdtAsset && parseFloat(usdtAsset.free) > 0) {
                 state.balance = parseFloat(usdtAsset.free);
-                logAction(`PRONAĐEN OLD BALANS: ${state.balance.toFixed(2)} USDC (Preporuka: Pretvori u USDC)`, "WARNING");
+                if (!state.initialBalanceLogged) {
+                    logAction(`PRONAĐEN OLD BALANS: ${state.balance.toFixed(2)} USDC (Preporuka: Pretvori u USDC)`, "WARNING");
+                    state.initialBalanceLogged = true;
+                }
             } else if (usdAsset && parseFloat(usdAsset.free) > 0) {
                 state.balance = 0;
-                logAction(`PRONAĐENO: ${parseFloat(usdAsset.free).toFixed(2)} USD. MORAŠ pretvoriti u USDC na Binanceu!`, "ERROR");
+                if (!state.initialBalanceLogged) {
+                    logAction(`PRONAĐENO: ${parseFloat(usdAsset.free).toFixed(2)} USD. MORAŠ pretvoriti u USDC na Binanceu!`, "ERROR");
+                    state.initialBalanceLogged = true;
+                }
             } else {
                 state.balance = 0;
-                logAction("Nije pronađen dostupan balans (USDC/USD) na Spot računu.", "INFO");
+                if (!state.initialBalanceLogged) {
+                    logAction("Nije pronađen dostupan balans (USDC/USD) na Spot računu.", "INFO");
+                    state.initialBalanceLogged = true;
+                }
             }
 
             // Sync real holdings for tracked coins
