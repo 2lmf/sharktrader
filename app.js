@@ -280,48 +280,44 @@ function openTradeModal(symbol, type) {
     const title = document.getElementById('modalTitle');
     activeTrade = { symbol, type };
 
-    title.innerText = `${type.toUpperCase()} ${symbol.replace('USDT', '')}`;
+    title.innerText = `${type.toUpperCase()} ${symbol.replace('USDC', '')}`;
     modal.classList.add('active');
     document.getElementById('tradeAmount').value = '';
     document.getElementById('tradeAmount').focus();
 }
 
-function closeModal() {
-    document.getElementById('tradeModal').classList.remove('active');
-}
-
 async function executeTrade() {
-    const amountUSDT = parseFloat(document.getElementById('tradeAmount').value);
-    if (!amountUSDT || amountUSDT <= 0) return alert("Unesite ispravan iznos.");
+    const amountUSDC = parseFloat(document.getElementById('tradeAmount').value);
+    if (!amountUSDC || amountUSDC <= 0) return alert("Unesite ispravan iznos.");
 
     const price = state.prices[activeTrade.symbol]?.price;
     if (!price) return alert("Cijena nije dostupna.");
 
-    const fee = amountUSDT * CONFIG.BINANCE_FEE;
+    const fee = amountUSDC * CONFIG.BINANCE_FEE;
 
     if (state.liveMode) {
         // ... (existing live trade logic)
     } else {
         // SIMULATION LOGIC
         if (activeTrade.type === 'buy') {
-            if (amountUSDT + fee > state.balance) return alert("Nedovoljno USDT za kupnju i naknadu.");
-            state.balance -= (amountUSDT + fee);
-            const coinAmount = amountUSDT / price;
+            if (amountUSDC + fee > state.balance) return alert("Nedovoljno USDC za kupnju i naknadu.");
+            state.balance -= (amountUSDC + fee);
+            const coinAmount = amountUSDC / price;
             state.holdings[activeTrade.symbol] = (state.holdings[activeTrade.symbol] || 0) + coinAmount;
 
             addTradeToHistory(activeTrade.symbol, 'BUY', coinAmount, price, fee);
-            logAction(`Kupljeno ${coinAmount.toFixed(4)} ${activeTrade.symbol.replace('USDT', '')} (Fee: ${fee.toFixed(4)} $)`, "BUY");
+            logAction(`Kupljeno ${coinAmount.toFixed(4)} ${activeTrade.symbol.replace('USDC', '')} (Fee: ${fee.toFixed(4)} $)`, "BUY");
         } else {
             const currentHolding = state.holdings[activeTrade.symbol] || 0;
-            const coinToSell = amountUSDT / price;
+            const coinToSell = amountUSDC / price;
             if (coinToSell > currentHolding) return alert("Nemate dovoljno kovanica za prodaju.");
 
-            const netAmount = amountUSDT - fee;
+            const netAmount = amountUSDC - fee;
             state.balance += netAmount;
             state.holdings[activeTrade.symbol] -= coinToSell;
 
             addTradeToHistory(activeTrade.symbol, 'SELL', coinToSell, price, fee);
-            logAction(`Prodano ${coinToSell.toFixed(4)} ${activeTrade.symbol.replace('USDT', '')} (Net: ${netAmount.toFixed(2)} $, Fee: ${fee.toFixed(4)} $)`, "SELL");
+            logAction(`Prodano ${coinToSell.toFixed(4)} ${activeTrade.symbol.replace('USDC', '')} (Net: ${netAmount.toFixed(2)} $, Fee: ${fee.toFixed(4)} $)`, "SELL");
         }
         saveState();
         updateUI();
@@ -369,14 +365,14 @@ function renderPriceCards() {
     CONFIG.COINS.forEach(symbol => {
         const meta = COIN_METADATA[symbol] || { name: symbol, icon: 'fas fa-coins' };
         const card = document.createElement('div');
-        const coinPrefix = symbol.replace('USDT', '').toLowerCase();
+        const coinPrefix = symbol.replace('USDC', '').toLowerCase();
         card.className = 'price-card glass';
         card.id = `card-${symbol}`;
         card.innerHTML = `
             <div class="coin-info">
                 <i class="${meta.icon}"></i>
                 <div>
-                    <div class="symbol">${symbol.replace('USDT', '')}/USDT</div>
+                    <div class="symbol">${symbol.replace('USDC', '')}/USDC</div>
                     <div class="name">${meta.name}</div>
                 </div>
             </div>
@@ -396,7 +392,7 @@ function renderPriceCards() {
 
 function calculateCoinSentiment(symbol) {
     let score = 50; // Neutral starting
-    const search = symbol.replace('USDT', '').toLowerCase();
+    const search = symbol.replace('USDC', '').toLowerCase();
 
     state.news.forEach(item => {
         const text = (item.title + item.body).toLowerCase();
@@ -411,7 +407,7 @@ function calculateCoinSentiment(symbol) {
 
 function updatePriceCards() {
     CONFIG.COINS.forEach(symbol => {
-        const coinPrefix = symbol.replace('USDT', '').toLowerCase();
+        const coinPrefix = symbol.replace('USDC', '').toLowerCase();
         const priceEl = document.getElementById(`${coinPrefix}Price`);
         const changeEl = document.getElementById(`${coinPrefix}Change`);
         const sentEl = document.getElementById(`${coinPrefix}Sentiment`);
@@ -463,7 +459,7 @@ function runAutoTradeAgent() {
 
         const sentiment = state.sentiment[symbol] || 50;
 
-        // Dynamic Min Balance (Live Mode uses 15 USDC, Simulation 100 USDT)
+        // Dynamic Min Balance (Live Mode uses 15 USDC, Simulation 100 USDC)
         const minBalance = state.liveMode ? 15 : 100;
         const tradeAmount = state.liveMode ? 15 : 100;
 
@@ -667,7 +663,7 @@ function updateUI() {
         labelEl.innerText = state.liveMode ? 'PRO LIVE BALANCE' : 'VIRTUAL BALANCE';
     }
 
-    // Calculate Net Worth: USDT Balance + Value of all Holdings
+    // Calculate Net Worth: USDC Balance + Value of all Holdings
     let totalValue = state.balance;
     Object.keys(state.holdings).forEach(symbol => {
         const amount = state.holdings[symbol];

@@ -43,8 +43,13 @@ app.post('/api/order', async (req, res) => {
 
     try {
         const timestamp = Date.now();
+        // Za BUY koristimo quoteOrderQty (iznos u USDC), za SELL bismo trebali quantity (količinu kovanice)
+        // Ali bot trenutno šalje quoteOrderQty za oboje. Popravit ćemo to ako treba.
         const queryString = `symbol=${symbol}&side=${side.toUpperCase()}&type=MARKET&quoteOrderQty=${quoteOrderQty}&timestamp=${timestamp}`;
         const signature = generateSignature(queryString);
+
+        console.log(`🚀 Šaljem nalog: ${side} ${symbol} iznos: ${quoteOrderQty} USDC`);
+        console.log(`🔗 Query: ${queryString}`);
 
         const response = await axios.post(`${BINANCE_API_URL}/api/v3/order?${queryString}&signature=${signature}`, null, {
             headers: { 'X-MBX-APIKEY': process.env.BINANCE_API_KEY }
@@ -52,8 +57,9 @@ app.post('/api/order', async (req, res) => {
 
         res.json(response.data);
     } catch (err) {
-        console.error("❌ Binance Order Greška:", err.response?.data || err.message);
-        res.status(500).json({ error: err.response?.data || err.message });
+        const errorData = err.response?.data || err.message;
+        console.error("❌ Binance Order Greška:", errorData);
+        res.status(500).json({ error: errorData });
     }
 });
 
