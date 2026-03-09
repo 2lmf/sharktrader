@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.18 PRO+) ---
+// --- SHARK TRADER SIMULATOR (v0.19 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTradeModal();
     initAutoTrade();
     initLiveMode();
+    initSettings();
     updateUI();
     renderPriceCards();
     fetchPrices();
@@ -100,6 +101,31 @@ function initLiveMode() {
             renderHoldings();
         });
     }
+}
+
+function initSettings() {
+    const btn = document.getElementById('btnSettings');
+    const modal = document.getElementById('settingsModal');
+    const input = document.getElementById('bridgeUrlInput');
+    const saveBtn = document.getElementById('btnSaveSettings');
+    const closeBtn = document.getElementById('btnCloseSettings');
+
+    if (!btn || !modal) return;
+
+    btn.onclick = () => {
+        input.value = state.bridgeUrl;
+        modal.classList.add('active');
+    };
+
+    closeBtn.onclick = () => modal.classList.remove('active');
+
+    saveBtn.onclick = () => {
+        state.bridgeUrl = input.value;
+        localStorage.setItem('SHARK_BRIDGE_URL', state.bridgeUrl);
+        modal.classList.remove('active');
+        checkBridgeStatus();
+        logAction(`Bridge URL promijenjen u: ${state.bridgeUrl}`, "INFO");
+    };
 }
 
 async function checkBridgeStatus() {

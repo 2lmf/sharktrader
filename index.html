@@ -40,6 +40,9 @@
                 <input type="checkbox" id="autoTradeToggle">
                 <span class="toggle-switch"></span>
             </label>
+            <button class="btn-icon" id="btnSettings" title="Postavke Bridge-a">
+                <i class="fas fa-cog"></i>
+            </button>
         </div>
         <div class="wallet-stat">
             <span class="label">VIRTUAL BALANCE</span>
@@ -139,6 +142,24 @@
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="closeModal()">ODUSTANI</button>
                 <button class="btn-primary" id="btnExecuteTrade">POTVRDI</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content glass">
+            <h3>SHARK BRIDGE POSTAVKE</h3>
+            <p style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 15px;">
+                Ako koristiš mobitel, ovdje upiši IP adresu svog laptopa (npr. http://192.168.1.5:3000).
+            </p>
+            <div class="form-group">
+                <label>Bridge URL:</label>
+                <input type="text" id="bridgeUrlInput" placeholder="http://localhost:3000" class="form-control">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="btnCloseSettings">ZATVORI</button>
+                <button class="btn-primary" id="btnSaveSettings">SPREMI</button>
             </div>
         </div>
     </div>
