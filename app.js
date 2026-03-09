@@ -71,6 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHoldings();
     renderHistory();
 
+    // Initial rapid data sync
+    fetchPrices();
+    fetchNews();
+    checkBridgeStatus().then(() => {
+        if (state.autoTrade) runAutoTradeAgent();
+    });
+
     // System checks
     setInterval(() => {
         fetchPrices();
