@@ -450,8 +450,10 @@ function runAutoTradeAgent() {
         return;
     }
 
-    // Blood in the Streets / Extreme Fear Opportunity
-    const entryThreshold = fngValue < 25 ? -0.5 : -1.5;
+    // TURBO HUNT (v0.26): Gladan morski pas (Povećani pragovi)
+    // Kupuje i kovanice koje su u plusu do 2.5% ako je sentiment dobar
+    const entryThreshold = fngValue < 25 ? 5.0 : 2.5;
+
 
     CONFIG.COINS.forEach(symbol => {
         const coin = state.prices[symbol];
