@@ -4,7 +4,7 @@ const CONFIG = {
     UPDATE_INTERVAL: 5000,
     INITIAL_BALANCE: 1000,
     BINANCE_FEE: 0.001, // 0.1% Standard Fee
-    COINS: ['BTCUSDC', 'ETHUSDC', 'SOLUSDC', 'BNBUSDC', 'XRPUSDC', 'ADAUSDC', 'DOGEUSDC', 'DOTUSDC', 'MATICUSDC', 'LINKUSDC', 'AVAXUSDC', 'FETUSDC']
+    COINS: ['BTCUSDC', 'ETHUSDC', 'SOLUSDC', 'BNBUSDC', 'XRPUSDC', 'ADAUSDC', 'DOGEUSDC', 'DOTUSDC', 'POLUSDC', 'LINKUSDC', 'AVAXUSDC', 'FETUSDC']
 };
 
 const COIN_METADATA = {
@@ -16,7 +16,7 @@ const COIN_METADATA = {
     'ADAUSDC': { name: 'Cardano', icon: 'fas fa-dna' },
     'DOGEUSDC': { name: 'Dogecoin', icon: 'fas fa-dog' },
     'DOTUSDC': { name: 'Polkadot', icon: 'fas fa-circle-nodes' },
-    'MATICUSDC': { name: 'Polygon', icon: 'fas fa-layer-group' },
+    'POLUSDC': { name: 'Polygon', icon: 'fas fa-layer-group' },
     'LINKUSDC': { name: 'Chainlink', icon: 'fas fa-link' },
     'AVAXUSDC': { name: 'Avalanche', icon: 'fas fa-mountain' },
     'FETUSDC': { name: 'Fetch.ai', icon: 'fas fa-brain' }
