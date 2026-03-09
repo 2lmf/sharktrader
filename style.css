@@ -55,33 +55,49 @@ body {
 }
 
 /* Mobile Adaptations */
+/* Mobile UI Overhaul (v0.16) */
 @media (max-width: 768px) {
     .navbar {
-        padding: 10px 15px;
-        flex-direction: column;
-        gap: 10px;
+        padding: 12px 15px;
+        display: grid;
+        grid-template-areas:
+            "logo balance"
+            "controls controls";
+        gap: 15px;
     }
 
     .logo {
-        font-size: 1rem;
-    }
-
-    .nav-controls {
-        width: 100%;
-        justify-content: space-between;
-    }
-
-    .wallet-stats {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 10px;
-        padding: 10px;
+        grid-area: logo;
+        font-size: 0.95rem;
+        align-self: center;
     }
 
     .wallet-stat {
-        flex: 1;
-        min-width: 120px;
+        grid-area: balance;
+        text-align: right;
+        background: rgba(230, 126, 34, 0.1);
+        padding: 5px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--accent-glow);
+    }
+
+    .wallet-stat .label {
+        font-size: 0.5rem;
+        display: block;
+    }
+
+    .wallet-stat .value {
+        font-size: 1rem !important;
+        color: var(--accent);
+        font-weight: 800;
+    }
+
+    .nav-controls {
+        grid-area: controls;
+        width: 100%;
+        justify-content: space-around;
+        padding-top: 10px;
+        border-top: 1px solid var(--glass-border);
     }
 
     .main-container {
@@ -91,21 +107,31 @@ body {
     .grid {
         grid-template-columns: 1fr;
     }
+}
 
-    .history-item {
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 5px;
+@media (max-width: 400px) {
+    .logo {
+        font-size: 0.85rem;
     }
 
-    .history-item .value {
-        font-weight: bold;
+    .wallet-stat .value {
+        font-size: 0.9rem !important;
     }
+}
 
-    .history-item .fee {
-        grid-column: span 3;
-        border-top: 1px dotted rgba(255, 255, 255, 0.1);
-        padding-top: 3px;
-    }
+.history-item {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 5px;
+}
+
+.history-item .value {
+    font-weight: bold;
+}
+
+.history-item .fee {
+    grid-column: span 3;
+    border-top: 1px dotted rgba(255, 255, 255, 0.1);
+    padding-top: 3px;
 }
 
 @media (max-width: 480px) {
