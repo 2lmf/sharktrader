@@ -1,25 +1,25 @@
-// --- SHARK TRADER SIMULATOR (v0.14 PRO+) ---
+// --- SHARK TRADER SIMULATOR (v0.17 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
     INITIAL_BALANCE: 1000,
     BINANCE_FEE: 0.001, // 0.1% Standard Fee
-    COINS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'ADAUSDT', 'DOGEUSDT', 'DOTUSDT', 'MATICUSDT', 'LINKUSDT', 'AVAXUSDT', 'FETUSDT']
+    COINS: ['BTCUSDC', 'ETHUSDC', 'SOLUSDC', 'BNBUSDC', 'XRPUSDC', 'ADAUSDC', 'DOGEUSDC', 'DOTUSDC', 'MATICUSDC', 'LINKUSDC', 'AVAXUSDC', 'FETUSDC']
 };
 
 const COIN_METADATA = {
-    'BTCUSDT': { name: 'Bitcoin', icon: 'fab fa-bitcoin' },
-    'ETHUSDT': { name: 'Ethereum', icon: 'fab fa-ethereum' },
-    'SOLUSDT': { name: 'Solana', icon: 'fas fa-s' },
-    'BNBUSDT': { name: 'Binance Coin', icon: 'fas fa-coins' },
-    'XRPUSDT': { name: 'Ripple', icon: 'fas fa-x' },
-    'ADAUSDT': { name: 'Cardano', icon: 'fas fa-dna' },
-    'DOGEUSDT': { name: 'Dogecoin', icon: 'fas fa-dog' },
-    'DOTUSDT': { name: 'Polkadot', icon: 'fas fa-circle-nodes' },
-    'MATICUSDT': { name: 'Polygon', icon: 'fas fa-layer-group' },
-    'LINKUSDT': { name: 'Chainlink', icon: 'fas fa-link' },
-    'AVAXUSDT': { name: 'Avalanche', icon: 'fas fa-mountain' },
-    'FETUSDT': { name: 'Fetch.ai', icon: 'fas fa-brain' }
+    'BTCUSDC': { name: 'Bitcoin', icon: 'fab fa-bitcoin' },
+    'ETHUSDC': { name: 'Ethereum', icon: 'fab fa-ethereum' },
+    'SOLUSDC': { name: 'Solana', icon: 'fas fa-s' },
+    'BNBUSDC': { name: 'Binance Coin', icon: 'fas fa-coins' },
+    'XRPUSDC': { name: 'Ripple', icon: 'fas fa-x' },
+    'ADAUSDC': { name: 'Cardano', icon: 'fas fa-dna' },
+    'DOGEUSDC': { name: 'Dogecoin', icon: 'fas fa-dog' },
+    'DOTUSDC': { name: 'Polkadot', icon: 'fas fa-circle-nodes' },
+    'MATICUSDC': { name: 'Polygon', icon: 'fas fa-layer-group' },
+    'LINKUSDC': { name: 'Chainlink', icon: 'fas fa-link' },
+    'AVAXUSDC': { name: 'Avalanche', icon: 'fas fa-mountain' },
+    'FETUSDC': { name: 'Fetch.ai', icon: 'fas fa-brain' }
 };
 
 const SHARK_AI = {
@@ -109,14 +109,22 @@ async function checkBridgeStatus() {
         if (state.liveMode && res.ok) {
             const data = await res.json();
 
-            // Sync real balance (find USDT)
-            const usdtAsset = data.balances.find(b => b.asset === 'USDT');
-            state.balance = usdtAsset ? parseFloat(usdtAsset.free) : 0.00;
+            // Sync real balance (find USDC - MiCA Compliant)
+            const usdcAsset = data.balances.find(b => b.asset === 'USDC');
+            state.balance = usdcAsset ? parseFloat(usdcAsset.free) : 0.00;
+
+            // Debug/Fallback for USD (if not yet converted)
+            if (state.balance === 0) {
+                const usdAsset = data.balances.find(b => b.asset === 'USD');
+                if (usdAsset) {
+                    console.log("USD found, conversion to USDC needed.");
+                }
+            }
 
             // Sync real holdings for tracked coins
             let realHoldings = {};
             CONFIG.COINS.forEach(symbol => {
-                const asset = symbol.replace('USDT', '');
+                const asset = symbol.replace('USDC', '');
                 const binanceAsset = data.balances.find(b => b.asset === asset);
                 if (binanceAsset && parseFloat(binanceAsset.free) > 0.000001) {
                     realHoldings[symbol] = parseFloat(binanceAsset.free);
@@ -515,7 +523,7 @@ function renderHoldings() {
         card.className = 'holding-card glass';
         card.innerHTML = `
             <div class="holding-info">
-                <div class="symbol">${symbol.replace('USDT', '')}</div>
+                <div class="symbol">${symbol.replace('USDC', '')}</div>
                 <div class="amount">${amount.toFixed(4)}</div>
             </div>
             <div class="holding-value">
@@ -543,7 +551,7 @@ function updateUI() {
         totalValue += amount * price;
     });
 
-    balanceEl.innerText = totalValue.toLocaleString('hr-HR', { minimumFractionDigits: 2 }) + ' USDT';
+    balanceEl.innerText = totalValue.toLocaleString('hr-HR', { minimumFractionDigits: 2 }) + ' USDC';
 }
 
 function formatCurrency(val) {
