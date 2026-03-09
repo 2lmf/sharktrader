@@ -463,9 +463,10 @@ function runAutoTradeAgent() {
         return;
     }
 
-    // HUNGRY BUT SMART (v0.27): Smanjena agresivnost zbog sprečavanja gubitka na "pumpe"
-    // Original je bio 2.5, sada je 0.1 (kupuje ako je kovanica stabilna ili u blagom plusu)
-    const entryThreshold = fngValue < 25 ? 0.5 : 0.1;
+    // HUNGRY SHARK MODE (v0.28): Ekstremna agresivnost po želji korisnika
+    // Kupuje sve do +2.5% ako je sentiment dobar. Grize odmah!
+    const entryThreshold = fngValue < 25 ? 5.0 : 2.5;
+
 
 
 
