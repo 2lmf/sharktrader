@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.13 PRO+) ---
+// --- SHARK TRADER SIMULATOR (v0.14 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -39,6 +39,7 @@ let state = {
     prices: {},
     autoTrade: savedAutoTrade,
     liveMode: savedLiveMode,
+    bridgeUrl: localStorage.getItem('SHARK_BRIDGE_URL') || 'http://localhost:3000',
     bridgeConnected: false,
     news: [],
     sentiment: {}
@@ -103,7 +104,7 @@ function initLiveMode() {
 
 async function checkBridgeStatus() {
     try {
-        const res = await fetch('http://localhost:3000/api/account');
+        const res = await fetch(`${state.bridgeUrl}/api/account`);
         state.bridgeConnected = res.ok;
         if (state.liveMode && res.ok) {
             const data = await res.json();
@@ -139,16 +140,20 @@ async function checkBridgeStatus() {
 }
 
 function updateBridgeUI() {
-    const el = document.getElementById('bridgeStatus');
-    if (!el) return;
-    const msg = el.querySelector('.status-msg');
+    const statusEl = document.getElementById('bridgeStatus');
+    if (statusEl) {
+        statusEl.className = 'bridge-status ' + (state.bridgeConnected ? 'connected' : 'disconnected');
+        statusEl.innerHTML = (state.bridgeConnected ? '<i class="fas fa-link"></i> CONNECTED' : '<i class="fas fa-unlink"></i> DISCONNECTED');
+        statusEl.onclick = changeBridgeUrl; // Click to change IP
+    }
+}
 
-    if (state.bridgeConnected) {
-        el.className = 'bridge-status connected';
-        msg.innerText = 'CONNECTED';
-    } else {
-        el.className = 'bridge-status';
-        msg.innerText = 'DISCONNECTED';
+function changeBridgeUrl() {
+    const newUrl = prompt("Unesite IP adresu svog laptopa (npr. http://192.168.1.5:3000):", state.bridgeUrl);
+    if (newUrl) {
+        state.bridgeUrl = newUrl;
+        localStorage.setItem('SHARK_BRIDGE_URL', newUrl);
+        checkBridgeStatus();
     }
 }
 
