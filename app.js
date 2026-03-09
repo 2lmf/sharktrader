@@ -463,9 +463,10 @@ function runAutoTradeAgent() {
         return;
     }
 
-    // TURBO HUNT (v0.26): Gladan morski pas (Povećani pragovi)
-    // Kupuje i kovanice koje su u plusu do 2.5% ako je sentiment dobar
-    const entryThreshold = fngValue < 25 ? 5.0 : 2.5;
+    // HUNGRY BUT SMART (v0.27): Smanjena agresivnost zbog sprečavanja gubitka na "pumpe"
+    // Original je bio 2.5, sada je 0.1 (kupuje ako je kovanica stabilna ili u blagom plusu)
+    const entryThreshold = fngValue < 25 ? 0.5 : 0.1;
+
 
 
     CONFIG.COINS.forEach(symbol => {
