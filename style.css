@@ -241,9 +241,9 @@ input:checked+.toggle-switch {
     border-color: var(--accent);
 }
 
-input:checked+.slider:before {
-    transform: translateX(20px);
-    background: var(--accent);
+input:checked+.toggle-switch::after {
+    transform: translateX(28px);
+    background: #fff;
     box-shadow: 0 0 10px var(--accent);
 }
 
