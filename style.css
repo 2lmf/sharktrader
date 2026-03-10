@@ -54,8 +54,19 @@ body {
     border-bottom: 1px solid var(--glass-border);
 }
 
-/* Mobile Adaptations */
-/* Mobile UI Overhaul (v0.16) */
+.net-payout-switch .switch-label {
+    color: var(--accent);
+    font-size: 0.55rem;
+}
+
+.net-payout-switch .toggle-switch {
+    background: rgba(230, 126, 34, 0.2);
+}
+
+.net-payout-switch input:checked+.toggle-switch {
+    background: var(--accent);
+}
+
 @media (max-width: 768px) {
     .navbar {
         padding: 12px 15px;
