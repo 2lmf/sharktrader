@@ -9,7 +9,7 @@
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=31">
+    <link rel="stylesheet" href="style.css?v=32">
 
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
@@ -24,7 +24,7 @@
 
     <nav class="navbar">
         <div class="logo">
-            SHARK<span class="accent">TRADER v0.31 PRO+</span>
+            SHARK<span class="accent">TRADER v0.32 PRO+</span>
         </div>
         <div class="nav-controls">
             <div id="bridgeStatus" class="bridge-status">
@@ -40,7 +40,12 @@
                 <input type="checkbox" id="autoTradeToggle">
                 <span class="toggle-switch"></span>
             </label>
-            <button class="btn-icon" id="btnSettings" title="Postavke Bridge-a">
+            <label class="switch-container net-payout-switch">
+                <span class="switch-label">NETO (-12%)</span>
+                <input type="checkbox" id="netPayoutToggle">
+                <span class="toggle-switch"></span>
+            </label>
+            <button class="settings-btn" onclick="toggleSettings()" title="Postavke Bridge-a">
                 <i class="fas fa-cog"></i>
             </button>
         </div>
@@ -192,7 +197,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=25"></script>
+    <script src="app.js?v=32"></script>
 </body>
 
 </html>

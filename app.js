@@ -39,6 +39,7 @@ let state = {
     prices: {},
     autoTrade: savedAutoTrade,
     liveMode: savedLiveMode,
+    showNetProfit: localStorage.getItem('SHARK_NET_PROFIT') === 'true',
     bridgeUrl: localStorage.getItem('SHARK_BRIDGE_URL') || 'http://localhost:3000',
     bridgeConnected: false,
     initialBalanceLogged: false,
@@ -63,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTradeModal();
     initAutoTrade();
     initLiveMode();
+    initNetPayout();
     initSettings();
     updateUI();
     renderPriceCards();
@@ -697,24 +699,54 @@ function renderHoldings() {
     });
 }
 
+// Initialize state.showNetProfit
+state.showNetProfit = localStorage.getItem('SHARK_NET_PROFIT') === 'true';
+
 function updateUI() {
     const balanceEl = document.getElementById('totalBalance');
     const labelEl = document.querySelector('.wallet-stat .label');
-    if (!balanceEl) return;
 
-    if (labelEl) {
-        labelEl.innerText = state.liveMode ? 'PRO LIVE BALANCE' : 'VIRTUAL BALANCE';
+    let displayBalance = state.balance;
+    let multiplier = 1.0;
+
+    if (state.showNetProfit) {
+        multiplier = 0.88; // -12% Tax Gravity
+        displayBalance *= multiplier;
+        if (labelEl) labelEl.innerText = "NETO ISPLATA (-12%)";
+        if (balanceEl) balanceEl.style.color = "var(--accent)";
+    } else {
+        if (labelEl) labelEl.innerText = state.liveMode ? "LIVE BALANCE" : "VIRTUAL BALANCE";
+        if (balanceEl) balanceEl.style.color = "var(--success)";
     }
 
-    // Calculate Net Worth: USDC Balance + Value of all Holdings
-    let totalValue = state.balance;
-    Object.keys(state.holdings).forEach(symbol => {
-        const amount = state.holdings[symbol];
-        const price = state.prices[symbol]?.price || 0;
-        totalValue += amount * price;
+    if (balanceEl) {
+        balanceEl.innerText = displayBalance.toLocaleString('hr-HR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " USDC";
+    }
+
+    // Update holdings with net values if needed
+    CONFIG.COINS.forEach(symbol => {
+        const valEl = document.getElementById(`val-${symbol}`);
+        if (valEl && state.prices[symbol]) {
+            const amount = state.holdings[symbol] || 0;
+            const value = amount * state.prices[symbol].price * multiplier;
+            valEl.innerText = value.toFixed(2) + " USDC";
+        }
     });
 
-    balanceEl.innerText = totalValue.toLocaleString('hr-HR', { minimumFractionDigits: 2 }) + ' USDC';
+    updateSummary();
+}
+
+function initNetPayout() {
+    const toggle = document.getElementById('netPayoutToggle');
+    if (toggle) {
+        toggle.checked = state.showNetProfit;
+        toggle.addEventListener('change', (e) => {
+            state.showNetProfit = e.target.checked;
+            localStorage.setItem('SHARK_NET_PROFIT', state.showNetProfit);
+            logAction(`Prikaz: ${state.showNetProfit ? 'NETO PROZOR (-12%)' : 'BRUTO IZNOS'}`, "INFO");
+            updateUI();
+        });
+    }
 }
 
 function formatCurrency(val) {
