@@ -35,7 +35,7 @@
                 <input type="checkbox" id="liveModeToggle">
                 <span class="toggle-switch"></span>
             </label>
-            <label class="switch-container">
+            <label class="switch-container pilot-switch">
                 <span class="switch-label">AUTO-TRADE</span>
                 <input type="checkbox" id="autoTradeToggle">
                 <span class="toggle-switch"></span>
@@ -45,6 +45,9 @@
             </button>
         </div>
         <div class="wallet-stat">
+            <div class="mirror-status" id="mirrorBadge">
+                <i class="fas fa-satellite-dish"></i> MIRROR
+            </div>
             <span class="label">VIRTUAL BALANCE</span>
             <span class="value" id="totalBalance">1.250,00 USDC</span>
         </div>
@@ -53,6 +56,17 @@
     <main class="container">
         <!-- Dashboard Header -->
         <header class="header">
+            <div class="pilot-card glass" id="pilotCard">
+                <div class="pilot-header">
+                    <i class="fas fa-robot"></i>
+                    <span>SHARK AUTO-PILOT</span>
+                </div>
+                <div class="pilot-status" id="pilotStatus">AI IS STANDING BY...</div>
+                <button class="btn-pilot" id="btnToggleAutoPilot">
+                    <i class="fas fa-power-off"></i> <span id="pilotBtnText">ACTIVATE AI</span>
+                </button>
+            </div>
+
             <div class="pulse-card glass">
                 <div class="pulse-header">
                     <span class="label">SHARK PULSE</span>
@@ -60,17 +74,6 @@
                 </div>
                 <div class="pulse-value accent" id="marketSentiment">BULLISH</div>
                 <p class="pulse-desc">Tržište pokazuje pozitivan trend (BTC +2.4%)</p>
-            </div>
-
-            <div class="stat-grid">
-                <div class="mini-card glass">
-                    <span class="label">PENDING TRADES</span>
-                    <span class="value">0</span>
-                </div>
-                <div class="mini-card glass">
-                    <span class="label">TOTAL PROFIT</span>
-                    <span class="value success">+0.00%</span>
-                </div>
             </div>
         </header>
 

@@ -190,41 +190,20 @@ async function checkBridgeStatus() {
     try {
         const res = await fetch(`${state.bridgeUrl}/api/account`);
         state.bridgeConnected = res.ok;
-        if (state.liveMode && res.ok) {
+        if (res.ok) {
             const data = await res.json();
 
-            // Sync real balance (find USDC - MiCA Compliant)
+            // MIRROR MODE: Always sync real balance if bridge is connected
             const usdcAsset = data.balances.find(b => b.asset === 'USDC');
-            const usdtAsset = data.balances.find(b => b.asset === 'USDT');
-            const usdAsset = data.balances.find(b => b.asset === 'USD');
-
-            if (usdcAsset && parseFloat(usdcAsset.free) > 0) {
+            if (usdcAsset) {
                 state.balance = parseFloat(usdcAsset.free);
                 if (!state.initialBalanceLogged) {
-                    logAction(`PRONAĐEN BALANS: ${state.balance.toFixed(2)} USDC`, "SUCCESS");
-                    state.initialBalanceLogged = true;
-                }
-            } else if (usdtAsset && parseFloat(usdtAsset.free) > 0) {
-                state.balance = parseFloat(usdtAsset.free);
-                if (!state.initialBalanceLogged) {
-                    logAction(`PRONAĐEN OLD BALANS: ${state.balance.toFixed(2)} USDC (Preporuka: Pretvori u USDC)`, "WARNING");
-                    state.initialBalanceLogged = true;
-                }
-            } else if (usdAsset && parseFloat(usdAsset.free) > 0) {
-                state.balance = 0;
-                if (!state.initialBalanceLogged) {
-                    logAction(`PRONAĐENO: ${parseFloat(usdAsset.free).toFixed(2)} USD. MORAŠ pretvoriti u USDC na Binanceu!`, "ERROR");
-                    state.initialBalanceLogged = true;
-                }
-            } else {
-                state.balance = 0;
-                if (!state.initialBalanceLogged) {
-                    logAction("Nije pronađen dostupan balans (USDC/USD) na Spot računu.", "INFO");
+                    logAction(`SHARK MIRROR: Sinkroniziran balans ${state.balance.toFixed(2)} USDC`, "SUCCESS");
                     state.initialBalanceLogged = true;
                 }
             }
 
-            // Sync real holdings for tracked coins
+            // Sync holdings for tracked coins (Mirroring)
             let realHoldings = {};
             CONFIG.COINS.forEach(symbol => {
                 const asset = symbol.replace('USDC', '');
@@ -235,15 +214,11 @@ async function checkBridgeStatus() {
             });
             state.holdings = realHoldings;
 
-            // Immediate UI Update
+            // UI Update
             updateUI();
             renderHoldings();
-
-            if (state.balance === 0 && !data.balances.find(b => b.asset === 'USDC')) {
-                console.warn("USDC NOT FOUND in Binance account! Checking other assets...");
-            }
         } else if (!state.liveMode) {
-            // Restore virtual state from storage if needed
+            // Restore virtual state if bridge is dead
             state.balance = parseFloat(localStorage.getItem('SHARK_WALLET')) || CONFIG.INITIAL_BALANCE;
             state.holdings = JSON.parse(localStorage.getItem('SHARK_HOLDINGS')) || {};
         }
@@ -251,7 +226,7 @@ async function checkBridgeStatus() {
         state.bridgeConnected = false;
         if (state.liveMode) {
             state.liveMode = false;
-            document.getElementById('liveModeToggle').checked = false;
+            if (document.getElementById('liveModeToggle')) document.getElementById('liveModeToggle').checked = false;
             logAction("VEZA S BRIDGE-OM IZGUBLJENA. LIVE MODE ugašen.", "ERROR");
         }
     }
@@ -260,10 +235,20 @@ async function checkBridgeStatus() {
 
 function updateBridgeUI() {
     const statusEl = document.getElementById('bridgeStatus');
+    const mirrorBadge = document.getElementById('mirrorBadge');
+
     if (statusEl) {
         statusEl.className = 'bridge-status ' + (state.bridgeConnected ? 'connected' : 'disconnected');
         statusEl.innerHTML = (state.bridgeConnected ? '<i class="fas fa-link"></i> CONNECTED' : '<i class="fas fa-unlink"></i> DISCONNECTED');
-        statusEl.onclick = changeBridgeUrl; // Click to change IP
+        statusEl.onclick = changeBridgeUrl;
+    }
+
+    if (mirrorBadge) {
+        if (state.bridgeConnected) {
+            mirrorBadge.classList.add('active');
+        } else {
+            mirrorBadge.classList.remove('active');
+        }
     }
 }
 
@@ -278,14 +263,46 @@ function changeBridgeUrl() {
 
 function initAutoTrade() {
     const toggle = document.getElementById('autoTradeToggle');
+    const pilotBtn = document.getElementById('btnToggleAutoPilot');
+
+    const updateAutoUI = () => {
+        const statusText = document.getElementById('pilotStatus');
+        const btnText = document.getElementById('pilotBtnText');
+        const pilotCard = document.getElementById('pilotCard');
+
+        if (state.autoTrade) {
+            if (statusText) statusText.innerText = "SHARK IS HUNTING...";
+            if (btnText) btnText.innerText = "DEACTIVATE AI";
+            if (pilotBtn) pilotBtn.classList.add('active');
+            if (toggle) toggle.checked = true;
+        } else {
+            if (statusText) statusText.innerText = "AI IS STANDING BY...";
+            if (btnText) btnText.innerText = "ACTIVATE AI";
+            if (pilotBtn) pilotBtn.classList.remove('active');
+            if (toggle) toggle.checked = false;
+        }
+    };
+
     if (toggle) {
         toggle.checked = state.autoTrade;
         toggle.addEventListener('change', (e) => {
             state.autoTrade = e.target.checked;
             localStorage.setItem('SHARK_AUTOTRADE', state.autoTrade);
             logAction(`AI Auto-Trade: ${state.autoTrade ? 'AKTIVIRAN' : 'DEAKTIVIRAN'}`, "INFO");
+            updateAutoUI();
         });
     }
+
+    if (pilotBtn) {
+        pilotBtn.addEventListener('click', () => {
+            state.autoTrade = !state.autoTrade;
+            localStorage.setItem('SHARK_AUTOTRADE', state.autoTrade);
+            logAction(`AI Auto-Pilot: ${state.autoTrade ? 'ON' : 'OFF'}`, state.autoTrade ? "SUCCESS" : "WARNING");
+            updateAutoUI();
+        });
+    }
+
+    updateAutoUI();
 }
 
 function initTradeModal() {
