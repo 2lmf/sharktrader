@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.28 PRO+) ---
+// --- SHARK TRADER SIMULATOR (v0.32 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -699,19 +699,13 @@ function renderHoldings() {
     });
 }
 
-// Initialize state.showNetProfit
-state.showNetProfit = localStorage.getItem('SHARK_NET_PROFIT') === 'true';
-
 function updateUI() {
     const balanceEl = document.getElementById('totalBalance');
     const labelEl = document.querySelector('.wallet-stat .label');
 
-    let displayBalance = state.balance;
-    let multiplier = 1.0;
+    let multiplier = state.showNetProfit ? 0.88 : 1.0;
 
     if (state.showNetProfit) {
-        multiplier = 0.88; // -12% Tax Gravity
-        displayBalance *= multiplier;
         if (labelEl) labelEl.innerText = "NETO ISPLATA (-12%)";
         if (balanceEl) balanceEl.style.color = "var(--accent)";
     } else {
@@ -720,20 +714,34 @@ function updateUI() {
     }
 
     if (balanceEl) {
-        balanceEl.innerText = displayBalance.toLocaleString('hr-HR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " USDC";
+        const netWorth = calculateNetWorth() * multiplier;
+        balanceEl.innerText = netWorth.toLocaleString('hr-HR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " USDC";
     }
 
-    // Update holdings with net values if needed
+    // Update individual coin values in price cards if they exist
     CONFIG.COINS.forEach(symbol => {
-        const valEl = document.getElementById(`val-${symbol}`);
-        if (valEl && state.prices[symbol]) {
-            const amount = state.holdings[symbol] || 0;
-            const value = amount * state.prices[symbol].price * multiplier;
-            valEl.innerText = value.toFixed(2) + " USDC";
+        const coinPrefix = symbol.replace('USDC', '').toLowerCase();
+        const priceEl = document.getElementById(`${coinPrefix}Price`);
+        if (priceEl && state.prices[symbol]) {
+            // Price is always market price, but we could highlight if neto is on
         }
     });
 
     updateSummary();
+}
+
+function calculateNetWorth() {
+    let total = state.balance;
+    Object.keys(state.holdings).forEach(symbol => {
+        const amount = state.holdings[symbol];
+        const price = state.prices[symbol]?.price || 0;
+        total += amount * price;
+    });
+    return total;
+}
+
+function updateSummary() {
+    // Optional: add more stats to the UI summary
 }
 
 function initNetPayout() {
