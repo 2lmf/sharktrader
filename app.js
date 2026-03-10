@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.34 PRO+) ---
+// --- SHARK TRADER SIMULATOR (v0.35 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -149,7 +149,9 @@ function initSettings() {
 async function fetchMarketWisdom() {
     if (!state.bridgeConnected) return;
     try {
-        const res = await fetch(`${state.bridgeUrl}/api/market-wisdom`);
+        const res = await fetch(`${state.bridgeUrl}/api/market-wisdom`, {
+            headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
         if (res.ok) {
             state.marketWisdom = await res.json();
             renderMarketWisdom();
@@ -196,7 +198,9 @@ function renderMarketWisdom() {
 }
 async function checkBridgeStatus() {
     try {
-        const res = await fetch(`${state.bridgeUrl}/api/account`);
+        const res = await fetch(`${state.bridgeUrl}/api/account`, {
+            headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
         state.bridgeConnected = res.ok;
         if (res.ok) {
             const data = await res.json();
@@ -546,7 +550,10 @@ async function autoExecuteTrade(symbol, type, amountUSDC, reason = "") {
             logAction(`LIVE ${type.toUpperCase()}: Pokušavam izvršiti red za ${symbol}...`, "INFO");
             const res = await fetch(`${state.bridgeUrl}/api/order`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                },
                 body: JSON.stringify({
                     symbol: symbol,
                     side: type.toUpperCase(),
