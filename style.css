@@ -18,11 +18,14 @@
     box-sizing: border-box;
 }
 
+html,
 body {
     background: var(--bg);
     color: var(--text-main);
     font-family: var(--font-body);
     overflow-x: hidden;
+    width: 100%;
+    position: relative;
     min-height: 100vh;
 }
 

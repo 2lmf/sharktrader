@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.33 PRO+) ---
+// --- SHARK TRADER SIMULATOR (v0.34 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
