@@ -235,8 +235,9 @@ async function checkBridgeStatus() {
         if (state.liveMode) {
             state.liveMode = false;
             if (document.getElementById('liveModeToggle')) document.getElementById('liveModeToggle').checked = false;
-            logAction("VEZA S BRIDGE-OM IZGUBLJENA. LIVE MODE ugašen.", "ERROR");
+            logAction("VEZA S BRIDGE-OM NEUSPJEŠNA. Provjerite IP adresu!", "ERROR");
         }
+        console.warn("Bridge Connection Failed:", e.message);
     }
     updateBridgeUI();
 }
