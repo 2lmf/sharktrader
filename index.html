@@ -9,7 +9,7 @@
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=32">
+    <link rel="stylesheet" href="style.css?v=33">
 
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
@@ -22,39 +22,44 @@
 <body>
     <div class="grid-overlay"></div>
 
-    <nav class="navbar">
-        <div class="logo">
-            SHARK<span class="accent">TRADER v0.32 PRO+</span>
-        </div>
-        <div class="nav-controls">
-            <div id="bridgeStatus" class="bridge-status">
-                <i class="fas fa-link"></i> BRIDGE: <span class="status-msg">DISCONNECTED</span>
+    <nav class="navbar-pro">
+        <div class="nav-tier-1">
+            <div class="logo">
+                SHARK<span class="accent">TRADER v0.33</span>
             </div>
-            <label class="switch-container">
-                <span class="switch-label">LIVE MODE</span>
-                <input type="checkbox" id="liveModeToggle">
-                <span class="toggle-switch"></span>
-            </label>
-            <label class="switch-container pilot-switch">
-                <span class="switch-label">AUTO-TRADE</span>
-                <input type="checkbox" id="autoTradeToggle">
-                <span class="toggle-switch"></span>
-            </label>
-            <label class="switch-container net-payout-switch">
-                <span class="switch-label">NETO (-12%)</span>
-                <input type="checkbox" id="netPayoutToggle">
-                <span class="toggle-switch"></span>
-            </label>
-            <button class="settings-btn" onclick="toggleSettings()" title="Postavke Bridge-a">
+            <div class="wallet-stat" id="walletStat">
+                <div class="mirror-status" id="mirrorBadge">
+                    <i class="fas fa-satellite-dish"></i> MIRROR
+                </div>
+                <span class="label">VIRTUAL BALANCE</span>
+                <span class="value" id="totalBalance">1.250,00 USDC</span>
+            </div>
+        </div>
+
+        <div class="nav-tier-2">
+            <div id="bridgeStatus" class="bridge-status">
+                <i class="fas fa-link"></i> <span class="status-msg">OFFLINE</span>
+            </div>
+            <div class="nav-switches">
+                <label class="switch-container">
+                    <span class="switch-label">LIVE</span>
+                    <input type="checkbox" id="liveModeToggle">
+                    <span class="toggle-switch"></span>
+                </label>
+                <label class="switch-container pilot-switch">
+                    <span class="switch-label">AUTO</span>
+                    <input type="checkbox" id="autoTradeToggle">
+                    <span class="toggle-switch"></span>
+                </label>
+                <label class="switch-container net-payout-switch">
+                    <span class="switch-label">NETO</span>
+                    <input type="checkbox" id="netPayoutToggle">
+                    <span class="toggle-switch"></span>
+                </label>
+            </div>
+            <button class="btn-icon" id="btnSettings" title="Postavke Bridge-a">
                 <i class="fas fa-cog"></i>
             </button>
-        </div>
-        <div class="wallet-stat">
-            <div class="mirror-status" id="mirrorBadge">
-                <i class="fas fa-satellite-dish"></i> MIRROR
-            </div>
-            <span class="label">VIRTUAL BALANCE</span>
-            <span class="value" id="totalBalance">1.250,00 USDC</span>
         </div>
     </nav>
 
@@ -82,10 +87,20 @@
             </div>
         </header>
 
-        <!-- Market Wisdom Panel (v0.25) -->
+        <!-- Bot Activity (Higher Up) -->
+        <section class="activity-section">
+            <div class="section-title">
+                <i class="fas fa-robot"></i> AI BOT DECISIONS
+            </div>
+            <div class="activity-log" id="botLog">
+                <!-- System logs -->
+            </div>
+        </section>
+
+        <!-- Market Wisdom Panel -->
         <section class="wisdom-section">
             <div class="section-title">
-                <i class="fas fa-brain"></i> MARKET WISDOM (HYPERDRIVE)
+                <i class="fas fa-brain"></i> MARKET WISDOM
             </div>
             <div class="wisdom-grid">
                 <div class="wisdom-card glass" id="fngCard">
@@ -93,74 +108,36 @@
                     <div class="fng-value">--</div>
                     <div class="fng-label">Loading...</div>
                 </div>
-                <div class="wisdom-card glass" id="whaleCard">
-                    <span class="label">WHALE ACTIVITY</span>
-                    <div class="whale-list" id="whaleList">
-                        <div class="whale-item">Scanning on-chain data...</div>
-                    </div>
-                </div>
-                <div class="wisdom-card glass" id="githubCard">
-                    <span class="label">BUILDER ALPHA</span>
-                    <div class="github-stats" id="githubStats">
-                        <div class="repo-stat">Checking GitHub pulse...</div>
-                    </div>
-                </div>
+                <!-- ... other wisdom cards ... -->
             </div>
         </section>
 
-        <!-- Live Market Section -->
+        <!-- Portfolio & History -->
+        <div class="dashboard-grid">
+            <section class="portfolio-section">
+                <div class="section-title"><i class="fas fa-wallet"></i> HOLDINGS</div>
+                <div class="holdings-grid" id="holdingsGrid"></div>
+            </section>
+            <section class="history-section">
+                <div class="section-title"><i class="fas fa-history"></i> TRADES</div>
+                <div class="trade-history glass" id="tradeHistory"></div>
+            </section>
+        </div>
+
+        <!-- Live Market -->
         <section class="market-section">
             <div class="section-title">
-                <i class="fas fa-chart-line"></i> LIVE MARKET (BINANCE FEED)
+                <i class="fas fa-chart-line"></i> LIVE MARKET
             </div>
-            <div class="price-cards" id="priceCards">
-                <!-- Dinamički generirano iz app.js -->
-                <div class="loading-prices">Učitavam cijene s burze...</div>
-            </div>
+            <div class="price-cards" id="priceCards"></div>
         </section>
 
-        <!-- Portfolio Section -->
-        <section class="portfolio-section">
-            <div class="section-title">
-                <i class="fas fa-wallet"></i> YOUR HOLDINGS
-            </div>
-            <div class="holdings-grid" id="holdingsGrid">
-                <!-- Populated by JS -->
-                <div class="empty-holdings">Vaš portfelj je prazan.</div>
-            </div>
-        </section>
-
-        <!-- Trade History Section -->
-        <section class="history-section">
-            <div class="section-title">
-                <i class="fas fa-history"></i> RECENT TRADES (WITH FEES)
-            </div>
-            <div class="trade-history glass" id="tradeHistory">
-                <div class="empty-history">Nema odrađenih trejdova.</div>
-            </div>
-        </section>
-
-        <!-- Shark News Feed -->
+        <!-- Shark News Feed (At the bottom) -->
         <section class="news-section">
             <div class="section-title">
                 <i class="fas fa-newspaper"></i> SHARK NEWS FEED
             </div>
-            <div class="news-grid" id="newsGrid">
-                <div class="loading-news">Slušam šapat oceana (učcitavam vijesti)...</div>
-            </div>
-        </section>
-
-        <!-- Bot Activity -->
-        <section class="activity-section">
-            <div class="section-title">
-                <i class="fas fa-robot"></i> AI BOT DECISIONS
-            </div>
-            <div class="activity-log" id="botLog">
-                <div class="log-item">
-                    <span class="type info">SYSTEM</span>
-                    <span class="msg">SHARK TRADER v0.28.1 SPREMAN ZA ANALIZU...</span>
-                </div>
-            </div>
+            <div class="news-grid" id="newsGrid"></div>
         </section>
     </main>
 
@@ -197,7 +174,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=32"></script>
+    <script src="app.js?v=33"></script>
 </body>
 
 </html>

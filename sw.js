@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shark-trader-v32';
+const CACHE_NAME = 'shark-trader-v33';
 const ASSETS = [
     'index.html',
     'style.css',

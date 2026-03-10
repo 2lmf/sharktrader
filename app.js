@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.32 PRO+) ---
+// --- SHARK TRADER SIMULATOR (v0.33 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -122,22 +122,28 @@ function initSettings() {
     const saveBtn = document.getElementById('btnSaveSettings');
     const closeBtn = document.getElementById('btnCloseSettings');
 
-    if (!btn || !modal) return;
+    if (!btn || !modal) {
+        console.warn("Shark: Settings elements missing");
+        return;
+    }
 
-    btn.onclick = () => {
+    btn.onclick = (e) => {
+        e.preventDefault();
         input.value = state.bridgeUrl;
         modal.classList.add('active');
     };
 
-    closeBtn.onclick = () => modal.classList.remove('active');
+    if (closeBtn) closeBtn.onclick = () => modal.classList.remove('active');
 
-    saveBtn.onclick = () => {
-        state.bridgeUrl = input.value;
-        localStorage.setItem('SHARK_BRIDGE_URL', state.bridgeUrl);
-        modal.classList.remove('active');
-        checkBridgeStatus();
-        logAction(`Bridge URL promijenjen u: ${state.bridgeUrl}`, "INFO");
-    };
+    if (saveBtn) {
+        saveBtn.onclick = () => {
+            state.bridgeUrl = input.value;
+            localStorage.setItem('SHARK_BRIDGE_URL', state.bridgeUrl);
+            modal.classList.remove('active');
+            checkBridgeStatus();
+            logAction(`Bridge URL promijenjen u: ${state.bridgeUrl}`, "INFO");
+        };
+    }
 }
 
 async function fetchMarketWisdom() {
@@ -718,12 +724,13 @@ function updateUI() {
         balanceEl.innerText = netWorth.toLocaleString('hr-HR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " USDC";
     }
 
-    // Update individual coin values in price cards if they exist
+    // Update individual coin grid values if they exist (holding-card)
     CONFIG.COINS.forEach(symbol => {
-        const coinPrefix = symbol.replace('USDC', '').toLowerCase();
-        const priceEl = document.getElementById(`${coinPrefix}Price`);
-        if (priceEl && state.prices[symbol]) {
-            // Price is always market price, but we could highlight if neto is on
+        const valEl = document.getElementById(`val-${symbol}`);
+        if (valEl && state.prices[symbol]) {
+            const amount = state.holdings[symbol] || 0;
+            const value = amount * state.prices[symbol].price * multiplier;
+            valEl.innerText = value.toFixed(2) + " USDC";
         }
     });
 
