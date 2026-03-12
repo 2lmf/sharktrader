@@ -38,6 +38,7 @@ let state = {
     history: JSON.parse(localStorage.getItem('SHARK_HISTORY')) || [],
     prices: {},
     autoTrade: savedAutoTrade,
+    tradingMode: localStorage.getItem('SHARK_TRADING_MODE') || 'standard',
     liveMode: savedLiveMode,
     showNetProfit: localStorage.getItem('SHARK_NET_PROFIT') === 'true',
     bridgeUrl: localStorage.getItem('SHARK_BRIDGE_URL') || 'http://localhost:3000',
@@ -65,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initAutoTrade();
     initLiveMode();
     initNetPayout();
+    initTradingMode();
     initSettings();
     updateUI();
     renderPriceCards();
@@ -318,6 +320,18 @@ function initAutoTrade() {
     updateAutoUI();
 }
 
+function initTradingMode() {
+    const select = document.getElementById('tradingModeSelect');
+    if (select) {
+        select.value = state.tradingMode;
+        select.addEventListener('change', (e) => {
+            state.tradingMode = e.target.value;
+            localStorage.setItem('SHARK_TRADING_MODE', state.tradingMode);
+            logAction(`STRATEGIJA: ${state.tradingMode === 'hyper' ? 'HYPER CONTRARIAN' : 'STANDARD SHARK'}`, "INFO");
+        });
+    }
+}
+
 function initTradeModal() {
     const btnExecute = document.getElementById('btnExecuteTrade');
     if (btnExecute) {
@@ -491,9 +505,56 @@ async function runAutoTradeAgent() {
     const now = Date.now();
     if (now - lastTradeTime < 10000) return; // limit trade rate
 
-    // HYPERDRIVE (v0.25): Contrarian Logic
     const fngValue = state.marketWisdom?.fng?.value || 50;
 
+    // HYPER CONTRARIAN SHARK (v0.36)
+    if (state.tradingMode === 'hyper') {
+        const isPanic = fngValue <= 30;
+
+        if (isPanic) {
+            for (const symbol of CONFIG.COINS) {
+                const coin = state.prices[symbol];
+                if (!coin) continue;
+
+                // High aggressiveness: Ignore price change, buy if we have balance
+                const minBalance = state.liveMode ? 15 : 100;
+                const tradeAmount = state.liveMode ? 15 : 100;
+
+                if (state.balance >= minBalance) {
+                    const currentHolding = state.holdings[symbol] || 0;
+                    if (currentHolding < 0.0001) {
+                        state.balance -= tradeAmount;
+                        await autoExecuteTrade(symbol, 'buy', tradeAmount, "HYPER PANIC BUY");
+                        lastTradeTime = now;
+                        updateUI();
+                        return; // One buy per cycle to avoid flooding
+                    }
+                }
+            }
+        }
+
+        // Sell logic for Hyper (Aggressive take profit)
+        for (const symbol of CONFIG.COINS) {
+            const coin = state.prices[symbol];
+            const currentHolding = state.holdings[symbol] || 0;
+            if (coin && currentHolding > 0) {
+                // Hyper mode exits faster if market is grease
+                if (coin.change > 10 || fngValue > 70) {
+                    const sellVal = currentHolding * coin.price;
+                    await autoExecuteTrade(symbol, 'sell', sellVal, "HYPER EXIT");
+                    lastTradeTime = now;
+                }
+                else if (coin.change < -15) { // Wider stop loss for hyper? No, standard is safer usually
+                    const sellVal = currentHolding * coin.price;
+                    await autoExecuteTrade(symbol, 'sell', sellVal, "HYPER STOP LOSS");
+                    lastTradeTime = now;
+                }
+            }
+        }
+        return; // Skip standard logic if hyper is active
+    }
+
+    // STANDARD SHARK LOGIC (v0.35)
     // Inverse Cramer / Extreme Greed Protection
     if (fngValue > 80) {
         if (now % 60000 < 5000) logAction("EXTREME GREED detected! Shark is staying in deep water (No Buying).", "WARNING");

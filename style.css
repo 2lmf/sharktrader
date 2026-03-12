@@ -498,6 +498,41 @@ input:checked+.toggle-switch::after {
     letter-spacing: 1px;
 }
 
+.strategy-selector {
+    width: 100%;
+    margin: 5px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-items: center;
+}
+
+.strategy-selector label {
+    font-size: 0.55rem;
+    font-family: var(--font-header);
+    color: var(--accent);
+    letter-spacing: 1px;
+}
+
+.strategy-selector select {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: #fff;
+    font-family: var(--font-header);
+    font-size: 0.7rem;
+    padding: 5px;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.strategy-selector select:hover {
+    border-color: var(--accent);
+    background: rgba(230, 126, 34, 0.1);
+}
+
 .btn-pilot {
     width: 100%;
     padding: 12px;
