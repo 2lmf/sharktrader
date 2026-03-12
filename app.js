@@ -38,8 +38,9 @@ let state = {
     history: JSON.parse(localStorage.getItem('SHARK_HISTORY')) || [],
     prices: {},
     autoTrade: savedAutoTrade,
-    tradingMode: localStorage.getItem('SHARK_TRADING_MODE') || 'standard',
+    tradingMode: localStorage.getItem('SHARK_TRADING_MODE') || 'balanced',
     liveMode: savedLiveMode,
+
     showNetProfit: localStorage.getItem('SHARK_NET_PROFIT') === 'true',
     bridgeUrl: localStorage.getItem('SHARK_BRIDGE_URL') || 'http://localhost:3000',
     bridgeConnected: false,
@@ -238,6 +239,9 @@ async function checkBridgeStatus() {
         }
     } catch (e) {
         state.bridgeConnected = false;
+        console.error("DEBUG - CONNECTION ERROR:", e);
+        console.error("DEBUG - SOURCE URL:", state.bridgeUrl);
+
         if (state.liveMode) {
             state.liveMode = false;
             if (document.getElementById('liveModeToggle')) document.getElementById('liveModeToggle').checked = false;
@@ -245,6 +249,7 @@ async function checkBridgeStatus() {
         }
         console.warn("Bridge Connection Failed:", e.message);
     }
+
     updateBridgeUI();
 }
 
@@ -327,7 +332,15 @@ function initTradingMode() {
         select.addEventListener('change', (e) => {
             state.tradingMode = e.target.value;
             localStorage.setItem('SHARK_TRADING_MODE', state.tradingMode);
-            logAction(`STRATEGIJA: ${state.tradingMode === 'hyper' ? 'HYPER CONTRARIAN' : 'STANDARD SHARK'}`, "INFO");
+
+            const modeNames = {
+                'zen': 'ZEN SHARK',
+                'balanced': 'BALANCED SHARK',
+                'smart': 'SMART SHARK',
+                'hungry': 'HUNGRY SHARK',
+                'hyper': 'HYPER CONTRARIAN'
+            };
+            logAction(`STRATEGIJA: ${modeNames[state.tradingMode] || state.tradingMode.toUpperCase()}`, "INFO");
         });
     }
 }
@@ -516,7 +529,6 @@ async function runAutoTradeAgent() {
                 const coin = state.prices[symbol];
                 if (!coin) continue;
 
-                // High aggressiveness: Ignore price change, buy if we have balance
                 const minBalance = state.liveMode ? 15 : 100;
                 const tradeAmount = state.liveMode ? 15 : 100;
 
@@ -527,65 +539,70 @@ async function runAutoTradeAgent() {
                         await autoExecuteTrade(symbol, 'buy', tradeAmount, "HYPER PANIC BUY");
                         lastTradeTime = now;
                         updateUI();
-                        return; // One buy per cycle to avoid flooding
+                        return;
                     }
                 }
             }
         }
 
-        // Sell logic for Hyper (Aggressive take profit)
+        // Sell logic for Hyper
         for (const symbol of CONFIG.COINS) {
             const coin = state.prices[symbol];
             const currentHolding = state.holdings[symbol] || 0;
             if (coin && currentHolding > 0) {
-                // Hyper mode exits faster if market is grease
                 if (coin.change > 10 || fngValue > 70) {
                     const sellVal = currentHolding * coin.price;
                     await autoExecuteTrade(symbol, 'sell', sellVal, "HYPER EXIT");
                     lastTradeTime = now;
                 }
-                else if (coin.change < -15) { // Wider stop loss for hyper? No, standard is safer usually
+                else if (coin.change < -15) {
                     const sellVal = currentHolding * coin.price;
                     await autoExecuteTrade(symbol, 'sell', sellVal, "HYPER STOP LOSS");
                     lastTradeTime = now;
                 }
             }
         }
-        return; // Skip standard logic if hyper is active
-    }
-
-    // STANDARD SHARK LOGIC (v0.35)
-    // Inverse Cramer / Extreme Greed Protection
-    if (fngValue > 80) {
-        if (now % 60000 < 5000) logAction("EXTREME GREED detected! Shark is staying in deep water (No Buying).", "WARNING");
         return;
     }
 
-    // HUNGRY SHARK MODE (v0.28): Ekstremna agresivnost po želji korisnika
-    // Kupuje sve do +2.5% ako je sentiment dobar. Grize odmah!
-    const entryThreshold = fngValue < 25 ? 5.0 : 2.5;
+    // --- STANDARD MODES (Zen, Balanced, Smart, Hungry) ---
+    const modeConfigs = {
+        'zen': { entryThreshold: -2.0, label: 'ZEN' },
+        'balanced': { entryThreshold: -0.5, label: 'BALANCED' },
+        'smart': { entryThreshold: 0.1, label: 'SMART' },
+        'hungry': { entryThreshold: 2.5, label: 'HUNGRY' }
+    };
+
+    const currentMode = modeConfigs[state.tradingMode] || modeConfigs['balanced'];
+
+    // Inverse Cramer / Extreme Greed Protection (Standard modes only)
+    if (fngValue > 80) {
+        if (now % 60000 < 5000) logAction(`EXTREME GREED detected! ${currentMode.label} is staying in deep water.`, "WARNING");
+        return;
+    }
+
+    const entryThreshold = currentMode.entryThreshold;
 
     for (const symbol of CONFIG.COINS) {
         const coin = state.prices[symbol];
         if (!coin) continue;
 
         const sentiment = state.sentiment[symbol] || 50;
-
-        // Dynamic Min Balance (Live Mode uses 15 USDC, Simulation 100 USDC)
         const minBalance = state.liveMode ? 15 : 100;
         const tradeAmount = state.liveMode ? 15 : 100;
 
-        if (coin.change < entryThreshold && sentiment >= 45 && state.balance >= minBalance) {
+        // Buying logic
+        if (coin.change <= entryThreshold && sentiment >= 45 && state.balance >= minBalance) {
             const currentHolding = state.holdings[symbol] || 0;
             if (currentHolding < 0.0001) {
-                // Odmah "rezerviramo" balans lokalno da spriječimo duple trejdove u istom ciklusu
                 state.balance -= tradeAmount;
-                await autoExecuteTrade(symbol, 'buy', tradeAmount, fngValue < 25 ? "EXTREME FEAR" : "DIP");
+                await autoExecuteTrade(symbol, 'buy', tradeAmount, `${currentMode.label} ENTRY`);
                 lastTradeTime = now;
-                updateUI(); // Osvježi UI odmah
+                updateUI();
             }
         }
 
+        // Selling logic
         const currentHolding = state.holdings[symbol] || 0;
         if (currentHolding > 0) {
             if (coin.change > SHARK_AI.TAKE_PROFIT) {
@@ -853,5 +870,3 @@ function logAction(msg, type = "INFO") {
 
     log.prepend(item);
 }
-/ /   T r i g g e r   b u i l d   v 0 . 3 6 . 1  
- 
