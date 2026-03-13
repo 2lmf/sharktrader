@@ -1,4 +1,4 @@
-// --- SHARK TRADER SIMULATOR (v0.35 PRO+) ---
+// --- SHARK TRADER SIMULATOR (v0.36 PRO+) ---
 
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
@@ -412,12 +412,13 @@ function saveState() {
 
 async function fetchPrices() {
     try {
-        // Binance Public Ticker API (CORS friendly for public endpoints)
-        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+        // Optimizirani Binance poziv (samo traženi simboli)
+        const symbolsQuery = encodeURIComponent(JSON.stringify(CONFIG.COINS));
+        const response = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${symbolsQuery}`);
         const data = await response.json();
 
-        // Filter requested coins
-        const filtered = data.filter(c => CONFIG.COINS.includes(c.symbol));
+        // Binance vraća instancu objekta s greškom ako nešto ne štima, ili array.
+        const filtered = Array.isArray(data) ? data : (data.code ? [] : [data]);
 
         filtered.forEach(coin => {
             state.prices[coin.symbol] = {
@@ -470,6 +471,8 @@ function renderPriceCards() {
 function calculateCoinSentiment(symbol) {
     let score = 50; // Neutral starting
     const search = symbol.replace('USDC', '').toLowerCase();
+
+    if (!Array.isArray(state.news)) return score;
 
     state.news.forEach(item => {
         const text = (item.title + item.body).toLowerCase();
@@ -550,13 +553,14 @@ async function runAutoTradeAgent() {
             const coin = state.prices[symbol];
             const currentHolding = state.holdings[symbol] || 0;
             if (coin && currentHolding > 0) {
+                const sellVal = currentHolding * coin.price;
+                if (state.liveMode && sellVal < 5.1) continue; // Binance MIN_NOTIONAL zaštita od spama za sitniš (dust)
+
                 if (coin.change > 10 || fngValue > 70) {
-                    const sellVal = currentHolding * coin.price;
                     await autoExecuteTrade(symbol, 'sell', sellVal, "HYPER EXIT");
                     lastTradeTime = now;
                 }
                 else if (coin.change < -15) {
-                    const sellVal = currentHolding * coin.price;
                     await autoExecuteTrade(symbol, 'sell', sellVal, "HYPER STOP LOSS");
                     lastTradeTime = now;
                 }
@@ -605,13 +609,14 @@ async function runAutoTradeAgent() {
         // Selling logic
         const currentHolding = state.holdings[symbol] || 0;
         if (currentHolding > 0) {
+            const sellVal = currentHolding * coin.price;
+            if (state.liveMode && sellVal < 5.1) continue; // Binance MIN_NOTIONAL zaštita od spama za sitniš (dust)
+
             if (coin.change > SHARK_AI.TAKE_PROFIT) {
-                const sellVal = currentHolding * coin.price;
                 await autoExecuteTrade(symbol, 'sell', sellVal, "PROFIT");
                 lastTradeTime = now;
             }
             else if (coin.change < SHARK_AI.STOP_LOSS) {
-                const sellVal = currentHolding * coin.price;
                 await autoExecuteTrade(symbol, 'sell', sellVal, "STOP LOSS");
                 lastTradeTime = now;
             }
@@ -711,10 +716,18 @@ async function fetchNews() {
     try {
         const response = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN');
         const data = await response.json();
-        state.news = data.Data;
-        renderNews(data.Data.slice(0, 6));
+        
+        if (data && Array.isArray(data.Data)) {
+            state.news = data.Data;
+            renderNews(data.Data.slice(0, 6));
+        } else {
+            console.warn("Shark: Vijesti nisu u očekivanom formatu (preskačem).");
+            state.news = [];
+            renderNews([]);
+        }
     } catch (err) {
         console.error("Shark: Greška pri dohvaćanju vijesti", err);
+        state.news = [];
     }
 }
 

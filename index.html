@@ -9,7 +9,7 @@
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=33">
+    <link rel="stylesheet" href="style.css?v=36">
 
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
@@ -25,7 +25,7 @@
     <nav class="navbar-pro">
         <div class="nav-tier-1">
             <div class="logo">
-                SHARK<span class="accent">TRADER v0.35 PRO+</span>
+                SHARK<span class="accent">TRADER v0.36 PRO+</span>
             </div>
             <div class="wallet-stat" id="walletStat">
                 <div class="mirror-status" id="mirrorBadge">
@@ -186,7 +186,32 @@
         </div>
     </div>
 
-    <script src="app.js?v=33"></script>
+    <script src="app.js?v=36"></script>
+    <script>
+        // FORCIBLY UNREGISTER SERVICE WORKERS (Bust aggressive PWA cache)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                let unregPromise = Promise.resolve();
+                for(let registration of registrations) {
+                    unregPromise = registration.unregister();
+                }
+                
+                unregPromise.then(() => {
+                    // Try to clear some active storage caches
+                    if ('caches' in window) {
+                        return caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+                    }
+                }).then(() => {
+                    // If we just cleared it, force reload once to get new files
+                    if (!sessionStorage.getItem('sw_cleared_v36')) {
+                        sessionStorage.setItem('sw_cleared_v36', 'true');
+                        console.log("🧹 SW Cleared, reloading page...");
+                        window.location.reload(true);
+                    }
+                });
+            });
+        }
+    </script>
 </body>
 
 </html>
