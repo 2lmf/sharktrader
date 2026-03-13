@@ -372,8 +372,35 @@ async function executeTrade() {
 
     const fee = amountUSDC * CONFIG.BINANCE_FEE;
 
+
     if (state.liveMode) {
-        // ... (existing live trade logic)
+        if (amountUSDC < 5.1) return alert("Binance minimum (MIN_NOTIONAL) je 5.10 USDC po nalogu.");
+        
+        // Manualni trade na Binanceu
+        logAction(`LIVE MANUAL: Pokrećem ${activeTrade.type.toUpperCase()} za ${activeTrade.symbol}...`, "INFO");
+        try {
+            const res = await fetch(`${state.bridgeUrl}/api/order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                body: JSON.stringify({
+                    symbol: activeTrade.symbol,
+                    side: activeTrade.type.toUpperCase(),
+                    quoteOrderQty: amountUSDC
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                logAction(`MANUAL USPJEH: ${activeTrade.type.toUpperCase()} ${activeTrade.symbol} za ${amountUSDC}$`, "SUCCESS");
+                checkBridgeStatus();
+                closeModal();
+            } else {
+                alert(`Binance greška: ${data.error?.msg || 'Nepoznato'}`);
+                logAction(`BINANCE GREŠKA: ${data.error?.msg}`, "ERROR");
+            }
+        } catch (e) {
+            alert("Greška u komunikaciji s Bridge-om.");
+            logAction(`BRIDGE ERROR (Manual).`, "ERROR");
+        }
     } else {
         // SIMULATION LOGIC
         if (activeTrade.type === 'buy') {
