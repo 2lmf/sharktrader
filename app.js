@@ -4,7 +4,7 @@ const CONFIG = {
     UPDATE_INTERVAL: 5000,
     INITIAL_BALANCE: 1000,
     BINANCE_FEE: 0.001, // 0.1% Standard Fee
-    COINS: ['BTCUSDC', 'ETHUSDC', 'SOLUSDC', 'BNBUSDC', 'XRPUSDC', 'ADAUSDC', 'DOGEUSDC', 'DOTUSDC', 'POLUSDC', 'LINKUSDC', 'AVAXUSDC', 'FETUSDC']
+    COINS: ['BTCUSDC', 'ETHUSDC', 'SOLUSDC', 'BNBUSDC', 'XRPUSDC', 'ADAUSDC', 'DOGEUSDC', 'DOTUSDC', 'POLUSDC', 'LINKUSDC', 'AVAXUSDC', 'FETUSDC', 'JUPUSDC', 'RENDERUSDC', 'PEPEUSDC', 'WIFUSDC', 'BONKUSDC']
 };
 
 const COIN_METADATA = {
@@ -19,7 +19,12 @@ const COIN_METADATA = {
     'POLUSDC': { name: 'Polygon', icon: 'fas fa-layer-group' },
     'LINKUSDC': { name: 'Chainlink', icon: 'fas fa-link' },
     'AVAXUSDC': { name: 'Avalanche', icon: 'fas fa-mountain' },
-    'FETUSDC': { name: 'Fetch.ai', icon: 'fas fa-brain' }
+    'FETUSDC': { name: 'Fetch.ai', icon: 'fas fa-brain' },
+    'JUPUSDC': { name: 'Jupiter', icon: 'fas fa-ring' },
+    'RENDERUSDC': { name: 'Render', icon: 'fas fa-cube' },
+    'PEPEUSDC': { name: 'Pepe', icon: 'fas fa-frog' },
+    'WIFUSDC': { name: 'dogwifhat', icon: 'fas fa-dog' },
+    'BONKUSDC': { name: 'Bonk', icon: 'fas fa-fire' }
 };
 
 const SHARK_AI = {
@@ -502,7 +507,7 @@ function calculateCoinSentiment(symbol) {
     if (!Array.isArray(state.news)) return score;
 
     state.news.forEach(item => {
-        const text = (item.title + item.body).toLowerCase();
+        const text = ((item.TITLE || item.title || "") + (item.BODY || item.body || "")).toLowerCase();
         if (text.includes(search)) {
             SHARK_AI.BULL_WORDS.forEach(w => { if (text.includes(w)) score += 5; });
             SHARK_AI.BEAR_WORDS.forEach(w => { if (text.includes(w)) score -= 8; });
@@ -741,7 +746,8 @@ function renderHistory() {
 // --- NEWS ENGINE ---
 async function fetchNews() {
     try {
-        const response = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN');
+        // Novi CryptoCompare Data API koji radi bez ključa (v1)
+        const response = await fetch('https://data-api.cryptocompare.com/news/v1/article/list?lang=EN');
         const data = await response.json();
         
         if (data && Array.isArray(data.Data)) {
@@ -766,14 +772,21 @@ function renderNews(news) {
     news.forEach(item => {
         const card = document.createElement('div');
         card.className = 'news-card glass';
+        
+        // Podrška za stari i novi format (mala/velika slova)
+        const imageUrl = item.IMAGE_URL || item.imageurl;
+        const sourceName = item.SOURCE_DATA?.NAME || item.source;
+        const title = item.TITLE || item.title;
+        const url = item.URL || item.url;
+
         card.innerHTML = `
-            <img src="${item.imageurl}" alt="news">
+            <img src="${imageUrl}" alt="news">
             <div class="news-content">
-                <span class="source">${item.source}</span>
-                <h4>${item.title}</h4>
+                <span class="source">${sourceName}</span>
+                <h4>${title}</h4>
             </div>
         `;
-        card.onclick = () => window.open(item.url, '_blank');
+        card.onclick = () => window.open(url, '_blank');
         grid.appendChild(card);
     });
 }
