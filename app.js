@@ -220,26 +220,37 @@ async function checkBridgeStatus() {
         if (res.ok) {
             const data = await res.json();
 
-            // MIRROR MODE: Always sync real balance if bridge is connected
-            const usdcAsset = data.balances.find(b => b.asset === 'USDC');
-            if (usdcAsset) {
-                state.balance = parseFloat(usdcAsset.free);
-                if (!state.initialBalanceLogged) {
-                    logAction(`SHARK MIRROR: Sinkroniziran balans ${state.balance.toFixed(2)} USDC`, "SUCCESS");
-                    state.initialBalanceLogged = true;
-                }
-            }
-
-            // Sync holdings for tracked coins (Mirroring)
+            // MIRROR MODE: Sync total net worth from Binance
+            let totalCash = 0;
             let realHoldings = {};
-            CONFIG.COINS.forEach(symbol => {
-                const asset = symbol.replace('USDC', '');
-                const binanceAsset = data.balances.find(b => b.asset === asset);
-                if (binanceAsset && parseFloat(binanceAsset.free) > 0.000001) {
-                    realHoldings[symbol] = parseFloat(binanceAsset.free);
+            
+            data.balances.forEach(b => {
+                const free = parseFloat(b.free);
+                const locked = parseFloat(b.locked);
+                const total = free + locked;
+                
+                if (total <= 0) return;
+
+                // 1. Stablecoins -> Treat as Cash
+                if (['USDC', 'USDT', 'BUSD', 'DAI'].includes(b.asset)) {
+                    totalCash += total;
+                } 
+                // 2. Tracked Coins -> Add to holdings
+                else {
+                    const symbol = b.asset + 'USDC';
+                    if (CONFIG.COINS.includes(symbol)) {
+                        realHoldings[symbol] = total;
+                    }
                 }
             });
+
+            state.balance = totalCash;
             state.holdings = realHoldings;
+
+            if (!state.initialBalanceLogged) {
+                logAction(`SHARK MIRROR: Sinkroniziran ukupni balans ${state.balance.toFixed(2)}$`, "SUCCESS");
+                state.initialBalanceLogged = true;
+            }
 
             // UI Update
             updateUI();
@@ -861,7 +872,7 @@ function updateUI() {
         if (labelEl) labelEl.innerText = "NETO ISPLATA (-12%)";
         if (balanceEl) balanceEl.style.color = "var(--accent)";
     } else {
-        if (labelEl) labelEl.innerText = state.liveMode ? "LIVE BALANCE" : "VIRTUAL BALANCE";
+        if (labelEl) labelEl.innerText = state.liveMode ? "TOTAL LIVE BALANCE" : "TOTAL VIRTUAL BALANCE";
         if (balanceEl) balanceEl.style.color = "var(--success)";
     }
 
