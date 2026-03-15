@@ -78,6 +78,20 @@ app.post('/api/order', async (req, res) => {
     }
 });
 
+// --- ENDPOINT: Get Prices (Proxy to avoid CORS/IP blocks) ---
+app.get('/api/prices', async (req, res) => {
+    try {
+        const { symbols } = req.query;
+        const url = `${BINANCE_API_URL}/api/v3/ticker/24hr${symbols ? '?symbols=' + encodeURIComponent(symbols) : ''}`;
+        
+        const response = await binanceClient.get(url);
+        res.json(response.data);
+    } catch (err) {
+        console.error("❌ Price Fetch Error:", err.message);
+        res.status(500).json({ error: "Could not fetch prices" });
+    }
+});
+
 // --- ENDPOINT: Market Wisdom (v0.25 Hyperdrive) ---
 app.get('/api/market-wisdom', async (req, res) => {
     try {

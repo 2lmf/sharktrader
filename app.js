@@ -462,9 +462,17 @@ function saveState() {
 
 async function fetchPrices() {
     try {
-        // Optimizirani Binance poziv (samo traženi simboli)
-        const symbolsQuery = encodeURIComponent(JSON.stringify(CONFIG.COINS));
-        const response = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${symbolsQuery}`);
+        const symbolsQuery = JSON.stringify(CONFIG.COINS);
+        let url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(symbolsQuery)}`;
+        
+        // If bridge is connected, route through bridge to avoid CORS and IP blocks
+        if (state.bridgeConnected) {
+            url = `${state.bridgeUrl}/api/prices?symbols=${encodeURIComponent(symbolsQuery)}`;
+        }
+
+        const response = await fetch(url, {
+            headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
         const data = await response.json();
 
         // Binance vraća instancu objekta s greškom ako nešto ne štima, ili array.
