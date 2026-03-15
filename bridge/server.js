@@ -82,14 +82,32 @@ app.post('/api/order', async (req, res) => {
 app.get('/api/prices', async (req, res) => {
     try {
         const { symbols } = req.query;
-        // Let axios handle the encoding and params construction
-        const response = await binanceClient.get('/api/v3/ticker/24hr', {
-            params: symbols ? { symbols: symbols } : {}
-        });
+        const config = { params: symbols ? { symbols: symbols } : {} };
+        const response = await binanceClient.get('/api/v3/ticker/24hr', config);
         res.json(response.data);
     } catch (err) {
-        console.error("❌ Price Fetch Error:", err.response?.data || err.message);
-        res.status(500).json({ error: "Could not fetch prices" });
+        const errorData = err.response?.data || err.message;
+        console.error("❌ Batch Price Fetch Error:", errorData);
+
+        // EXTRA DEBUG: If it's an invalid symbol error, find which one!
+        if (req.query.symbols && errorData.code === -1121) {
+            console.log("🔍 Running elimination debug to find the culprit...");
+            try {
+                const coins = JSON.parse(req.query.symbols);
+                for (const coin of coins) {
+                    try {
+                        await binanceClient.get('/api/v3/ticker/24hr', { params: { symbol: coin } });
+                    } catch (e) {
+                        console.error(`‼️ FOUND INVALID SYMBOL: ${coin}`);
+                        console.error(`Reason: ${JSON.stringify(e.response?.data || e.message)}`);
+                    }
+                }
+            } catch (parseErr) {
+                console.error("Debug Parse Error:", parseErr.message);
+            }
+        }
+        
+        res.status(500).json({ error: errorData });
     }
 });
 
