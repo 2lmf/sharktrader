@@ -3,6 +3,13 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const crypto = require('crypto');
+const SocksProxyAgent = require('socks-proxy-agent');
+
+// Konfiguracija za Proxy (Shadow Bridge)
+const PROXY_URL = process.env.PROXY_URL || 'socks5h://127.0.0.1:1080';
+const USE_PROXY = process.env.USE_PROXY === 'true';
+
+const httpsAgent = USE_PROXY ? new SocksProxyAgent(PROXY_URL) : null;
 
 const app = express();
 app.use(cors());
@@ -10,6 +17,12 @@ app.use(express.json());
 
 const PORT = 3000;
 const BINANCE_API_URL = 'https://api.binance.com';
+
+const binanceClient = axios.create({
+    baseURL: BINANCE_API_URL,
+    httpsAgent: httpsAgent,
+    httpAgent: httpsAgent
+});
 
 // --- MIDDLEWARE: Signature Generator for Binance ---
 function generateSignature(queryString) {
@@ -26,7 +39,7 @@ app.get('/api/account', async (req, res) => {
         const queryString = `timestamp=${timestamp}`;
         const signature = generateSignature(queryString);
 
-        const response = await axios.get(`${BINANCE_API_URL}/api/v3/account?${queryString}&signature=${signature}`, {
+        const response = await binanceClient.get(`/api/v3/account?${queryString}&signature=${signature}`, {
             headers: { 'X-MBX-APIKEY': process.env.BINANCE_API_KEY }
         });
 
@@ -53,7 +66,7 @@ app.post('/api/order', async (req, res) => {
         console.log(`🚀 Šaljem nalog: ${side} ${symbol} iznos: ${safeQty} USDC`);
         console.log(`🔗 Query: ${queryString}`);
 
-        const response = await axios.post(`${BINANCE_API_URL}/api/v3/order?${queryString}&signature=${signature}`, null, {
+        const response = await binanceClient.post(`/api/v3/order?${queryString}&signature=${signature}`, null, {
             headers: { 'X-MBX-APIKEY': process.env.BINANCE_API_KEY }
         });
 

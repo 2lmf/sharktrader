@@ -4,7 +4,7 @@ const CONFIG = {
     UPDATE_INTERVAL: 5000,
     INITIAL_BALANCE: 1000,
     BINANCE_FEE: 0.001, // 0.1% Standard Fee
-    COINS: ['BTCUSDC', 'ETHUSDC', 'SOLUSDC', 'BNBUSDC', 'XRPUSDC', 'ADAUSDC', 'DOGEUSDC', 'DOTUSDC', 'POLUSDC', 'LINKUSDC', 'AVAXUSDC', 'FETUSDC', 'JUPUSDC', 'RENDERUSDC', 'PEPEUSDC', 'WIFUSDC', 'BONKUSDC']
+    COINS: ['BTCUSDC', 'ETHUSDC', 'SOLUSDC', 'BNBUSDC', 'XRPUSDC', 'ADAUSDC', 'DOGEUSDC', 'DOTUSDC', 'POLUSDC', 'LINKUSDC', 'AVAXUSDC', 'FETUSDC', 'JUPUSDC', 'RENDERUSDC', 'PEPEUSDC', 'WIFUSDC', 'BONKUSDC', 'NEARUSDC', 'TAOUSDC', 'GRTUSDC', 'POPCATUSDC', 'FLOKIUSDC', 'UNIUSDC', 'ONDOUSDC']
 };
 
 const COIN_METADATA = {
@@ -24,7 +24,14 @@ const COIN_METADATA = {
     'RENDERUSDC': { name: 'Render', icon: 'fas fa-cube' },
     'PEPEUSDC': { name: 'Pepe', icon: 'fas fa-frog' },
     'WIFUSDC': { name: 'dogwifhat', icon: 'fas fa-dog' },
-    'BONKUSDC': { name: 'Bonk', icon: 'fas fa-fire' }
+    'BONKUSDC': { name: 'Bonk', icon: 'fas fa-fire' },
+    'NEARUSDC': { name: 'Near Protocol', icon: 'fas fa-globe' },
+    'TAOUSDC': { name: 'Bittensor', icon: 'fas fa-brain' },
+    'GRTUSDC': { name: 'The Graph', icon: 'fas fa-search' },
+    'POPCATUSDC': { name: 'Popcat', icon: 'fas fa-cat' },
+    'FLOKIUSDC': { name: 'Floki', icon: 'fas fa-shield-dog' },
+    'UNIUSDC': { name: 'Uniswap', icon: 'fas fa-horse-head' },
+    'ONDOUSDC': { name: 'Ondo Finance', icon: 'fas fa-building-columns' }
 };
 
 const SHARK_AI = {
