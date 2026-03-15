@@ -24,6 +24,22 @@ const binanceClient = axios.create({
     httpAgent: httpsAgent
 });
 
+let timeOffset = 0;
+
+// Sinkronizacija vremena s Binance serverom u pozadini
+async function syncTime() {
+    try {
+        const response = await axios.get('https://api.binance.com/api/v3/time');
+        const serverTime = response.data.serverTime;
+        timeOffset = serverTime - Date.now();
+        console.log(`⏱️ Vrijeme sinkronizirano s Binanceom! Offset: ${timeOffset}ms`);
+    } catch (err) {
+        console.error("❌ Greška pri sinkronizaciji vremena:", err.message);
+    }
+}
+syncTime();
+setInterval(syncTime, 1000 * 60 * 60); // Osvježi svakih sat vremena
+
 // --- MIDDLEWARE: Signature Generator for Binance ---
 function generateSignature(queryString) {
     return crypto
@@ -35,8 +51,8 @@ function generateSignature(queryString) {
 // --- ENDPOINT: Get Real Balance ---
 app.get('/api/account', async (req, res) => {
     try {
-        const timestamp = Date.now();
-        const queryString = `timestamp=${timestamp}`;
+        const timestamp = Date.now() + timeOffset;
+        const queryString = `recvWindow=60000&timestamp=${timestamp}`;
         const signature = generateSignature(queryString);
 
         const response = await binanceClient.get(`/api/v3/account?${queryString}&signature=${signature}`, {
@@ -55,12 +71,12 @@ app.post('/api/order', async (req, res) => {
     const { symbol, side, quoteOrderQty } = req.body;
 
     try {
-        const timestamp = Date.now();
+        const timestamp = Date.now() + timeOffset;
         // Za BUY koristimo quoteOrderQty (iznos u USDC), za SELL bismo trebali quantity (količinu kovanice)
         // Ali bot trenutno šalje quoteOrderQty za oboje. Popravit ćemo to ako treba.
         // Osiguravamo maksimalno 4 decimale za USDC kako bismo izbjegli precision grešku s Binance API-jem.
         const safeQty = parseFloat(Number(quoteOrderQty).toFixed(4));
-        const queryString = `symbol=${symbol}&side=${side.toUpperCase()}&type=MARKET&quoteOrderQty=${safeQty}&timestamp=${timestamp}`;
+        const queryString = `symbol=${symbol}&side=${side.toUpperCase()}&type=MARKET&quoteOrderQty=${safeQty}&recvWindow=60000&timestamp=${timestamp}`;
         const signature = generateSignature(queryString);
 
         console.log(`🚀 Šaljem nalog: ${side} ${symbol} iznos: ${safeQty} USDC`);
