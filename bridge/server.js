@@ -82,12 +82,13 @@ app.post('/api/order', async (req, res) => {
 app.get('/api/prices', async (req, res) => {
     try {
         const { symbols } = req.query;
-        const url = `${BINANCE_API_URL}/api/v3/ticker/24hr${symbols ? '?symbols=' + encodeURIComponent(symbols) : ''}`;
-        
-        const response = await binanceClient.get(url);
+        // Let axios handle the encoding and params construction
+        const response = await binanceClient.get('/api/v3/ticker/24hr', {
+            params: symbols ? { symbols: symbols } : {}
+        });
         res.json(response.data);
     } catch (err) {
-        console.error("❌ Price Fetch Error:", err.message);
+        console.error("❌ Price Fetch Error:", err.response?.data || err.message);
         res.status(500).json({ error: "Could not fetch prices" });
     }
 });

@@ -489,7 +489,10 @@ async function fetchPrices() {
         analyzeMarket();
         updateUI(); // Osvježi Net Worth (Ukupnu vrijednost)
     } catch (err) {
-        console.error("Shark: Greška pri dohvaćanju cijena", err);
+        console.error("Shark Price Error:", err);
+        if (state.liveMode) {
+            logAction("Greška pri sinkronizaciji cijena. Provjerite Bridge.", "ERROR");
+        }
     }
 }
 
