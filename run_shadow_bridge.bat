@@ -8,7 +8,7 @@ set BRIDGE_DIR=%~dp0bridge
 echo Shark Bridge starting...
 
 echo Spajam se na Oracle VPS (%VPS_IP%)...
-start /b ssh -N -D 1080 -o StrictHostKeyChecking=no -i "%~dp0%KEY_FILE%" ubuntu@%VPS_IP%
+start "Shark Proxy" cmd /c "%~dp0run_proxy_loop.bat"
 
 timeout /t 3 /nobreak > nul
 
