@@ -29,7 +29,7 @@ let timeOffset = 0;
 // Sinkronizacija vremena s Binance serverom u pozadini
 async function syncTime() {
     try {
-        const response = await axios.get('https://api.binance.com/api/v3/time');
+        const response = await binanceClient.get('/api/v3/time');
         const serverTime = response.data.serverTime;
         timeOffset = serverTime - Date.now();
         console.log(`⏱️ Vrijeme sinkronizirano s Binanceom! Offset: ${timeOffset}ms`);
@@ -38,8 +38,7 @@ async function syncTime() {
     }
 }
 syncTime();
-syncTime();
-setInterval(syncTime, 1000 * 60 * 10); // Osvježi svakih 10 minuta (umjesto svakih sat vremena)
+setInterval(syncTime, 1000 * 60 * 10); // Osvježi svakih 10 minuta
 
 // --- MIDDLEWARE: Signature Generator for Binance ---
 function generateSignature(queryString) {
