@@ -38,7 +38,8 @@ async function syncTime() {
     }
 }
 syncTime();
-setInterval(syncTime, 1000 * 60 * 60); // Osvježi svakih sat vremena
+syncTime();
+setInterval(syncTime, 1000 * 60 * 10); // Osvježi svakih 10 minuta (umjesto svakih sat vremena)
 
 // --- MIDDLEWARE: Signature Generator for Binance ---
 function generateSignature(queryString) {
@@ -61,8 +62,16 @@ app.get('/api/account', async (req, res) => {
 
         res.json(response.data);
     } catch (err) {
-        console.error("❌ Binance API Greška:", err.response?.data || err.message);
-        res.status(500).json({ error: err.response?.data || err.message });
+        const errorData = err.response?.data || err.message;
+        console.error("❌ Binance API Greška:", errorData);
+
+        // Automatska re-sinkronizacija ako je problem s vremenom (-1021)
+        if (errorData.code === -1021) {
+            console.log("🔄 Otkriven problem s vremenom. Pokrećem prisilnu re-sinkronizaciju...");
+            await syncTime();
+        }
+
+        res.status(500).json({ error: errorData });
     }
 });
 
@@ -90,6 +99,13 @@ app.post('/api/order', async (req, res) => {
     } catch (err) {
         const errorData = err.response?.data || err.message;
         console.error("❌ Binance Order Greška:", errorData);
+
+        // Automatska re-sinkronizacija ako je problem s vremenom (-1021)
+        if (errorData.code === -1021) {
+            console.log("🔄 Otkriven problem s vremenom tijekom reda. Pokrećem re-sinkronizaciju...");
+            await syncTime();
+        }
+
         res.status(500).json({ error: errorData });
     }
 });
