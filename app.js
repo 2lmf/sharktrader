@@ -616,7 +616,7 @@ async function runAutoTradeAgent() {
                 const sellVal = currentHolding * coin.price;
                 if (state.liveMode && sellVal < 5.1) continue; // Binance MIN_NOTIONAL zaštita od spama za sitniš (dust)
 
-                if (coin.change > 10 || fngValue > 70) {
+                if (coin.change > 10 || fngValue > 75) { // v0.37: F&G exit 70 -> 75
                     await autoExecuteTrade(symbol, 'sell', sellVal, "HYPER EXIT");
                     lastTradeTime = now;
                 }
