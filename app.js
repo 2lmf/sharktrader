@@ -585,7 +585,7 @@ async function runAutoTradeAgent() {
 
     // HYPER CONTRARIAN SHARK (v0.36)
     if (state.tradingMode === 'hyper') {
-        const isPanic = fngValue <= 30;
+        const isPanic = fngValue <= 40; // v0.37: prošireno s 30 na 40 (Fear zona)
 
         if (isPanic) {
             for (const symbol of CONFIG.COINS) {
