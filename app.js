@@ -220,21 +220,26 @@ async function checkBridgeStatus() {
             const data = await res.json();
 
             // MIRROR MODE: Sync total net worth from Binance
-            let totalCash = 0;
+            let totalCash = 0;      // USDC/stablecoins — za trading
+            let totalFiat = 0;      // USD fiat — samo za prikaz
             let realHoldings = {};
-            
+
             data.balances.forEach(b => {
                 const free = parseFloat(b.free);
                 const locked = parseFloat(b.locked);
                 const total = free + locked;
-                
+
                 if (total <= 0) return;
 
-                // 1. Stablecoins -> Treat as Cash
+                // 1. Tradeable stablecoins
                 if (['USDC', 'USDT', 'BUSD', 'DAI'].includes(b.asset)) {
                     totalCash += total;
-                } 
-                // 2. Tracked Coins -> Add to holdings
+                }
+                // 2. USD fiat — prikaži ali ne trguj
+                else if (b.asset === 'USD') {
+                    totalFiat += total;
+                }
+                // 3. Tracked Coins -> Add to holdings
                 else {
                     const symbol = b.asset + 'USDC';
                     if (CONFIG.COINS.includes(symbol)) {
@@ -244,6 +249,7 @@ async function checkBridgeStatus() {
             });
 
             state.balance = totalCash;
+            state.fiatBalance = totalFiat;
             state.holdings = realHoldings;
 
             if (!state.initialBalanceLogged) {
@@ -903,7 +909,7 @@ function updateUI() {
 }
 
 function calculateNetWorth() {
-    let total = state.balance;
+    let total = state.balance + (state.fiatBalance || 0);
     Object.keys(state.holdings).forEach(symbol => {
         const amount = state.holdings[symbol];
         const price = state.prices[symbol]?.price || 0;
