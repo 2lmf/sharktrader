@@ -231,7 +231,7 @@ async function checkBridgeStatus() {
                 if (total <= 0) return;
 
                 // 1. Stablecoins -> Treat as Cash
-                if (['USDC', 'USDT', 'BUSD', 'DAI', 'USD'].includes(b.asset)) {
+                if (['USDC', 'USDT', 'BUSD', 'DAI'].includes(b.asset)) {
                     totalCash += total;
                 } 
                 // 2. Tracked Coins -> Add to holdings
