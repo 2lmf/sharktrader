@@ -218,7 +218,7 @@ PRAVILA:
             system_instruction: { parts: [{ text: systemPrompt }] },
             contents: [{ role: 'user', parts: [{ text: message }] }],
             generationConfig: { maxOutputTokens: 220, temperature: 0.7 }
-        });
+        }, { httpsAgent: httpsAgent, httpAgent: httpsAgent });
 
         const reply = response.data.candidates[0].content.parts[0].text;
         console.log(`🦈 Analyst chat: "${message.substring(0, 50)}..." → ${reply.length} chars`);

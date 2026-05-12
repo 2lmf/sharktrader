@@ -1025,9 +1025,11 @@ async function sendToAnalyst(message) {
         const data = await res.json();
         showTyping(false);
         addChatMsg('analyst', data.reply);
-    } catch {
+    } catch (err) {
         showTyping(false);
-        addChatMsg('analyst', 'Bridge nije dostupan. Pokreni server.js i poveži bridge za AI analitiku.', true);
+        addChatMsg('analyst', err?.message?.includes('Failed') || err?.message?.includes('fetch')
+            ? 'Bridge nije dostupan. Provjeri je li run_shadow_bridge.bat pokrenut.'
+            : `AI greška: ${err?.message || 'nepoznata'}`, true);
     }
 }
 
