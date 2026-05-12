@@ -213,7 +213,7 @@ PRAVILA:
   Primjer: [PRIJEDLOG: BUY SOLUSDC 50]
 - Odgovaraj na jeziku na kojem ti korisnik piše (HR ili EN)`;
 
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
         const response = await axios.post(geminiUrl, {
             system_instruction: { parts: [{ text: systemPrompt }] },
             contents: [{ role: 'user', parts: [{ text: message }] }],
