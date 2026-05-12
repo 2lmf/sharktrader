@@ -179,8 +179,8 @@ app.get('/api/market-wisdom', async (req, res) => {
 app.post('/api/chat', async (req, res) => {
     const { message, context } = req.body;
     if (!message) return res.status(400).json({ error: 'No message' });
-    if (!process.env.GEMINI_API_KEY) {
-        return res.status(503).json({ error: 'GEMINI_API_KEY nije postavljen u .env datoteci.' });
+    if (!process.env.GROQ_API_KEY) {
+        return res.status(503).json({ error: 'GROQ_API_KEY nije postavljen u .env datoteci.' });
     }
 
     try {
@@ -213,14 +213,22 @@ PRAVILA:
   Primjer: [PRIJEDLOG: BUY SOLUSDC 50]
 - Odgovaraj na jeziku na kojem ti korisnik piše (HR ili EN)`;
 
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-        const response = await axios.post(geminiUrl, {
-            system_instruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: message }] }],
-            generationConfig: { maxOutputTokens: 220, temperature: 0.7 }
+        const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+            model: 'llama-3.3-70b-versatile',
+            max_tokens: 220,
+            temperature: 0.7,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: message }
+            ]
+        }, {
+            headers: {
+                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
         });
 
-        const reply = response.data.candidates[0].content.parts[0].text;
+        const reply = response.data.choices[0].message.content;
         console.log(`🦈 Analyst chat: "${message.substring(0, 50)}..." → ${reply.length} chars`);
         res.json({ reply });
     } catch (err) {
