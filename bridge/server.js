@@ -210,7 +210,8 @@ PRAVILA:
 - Referenciraj konkretne brojke iz snapshota
 - Budi direktan, bez uvoda i ispunjavanja
 - Ako predlažeš trade, na kraju odgovora stavi TOČNO ovaj format: [PRIJEDLOG: BUY/SELL SIMBOLUSDC IZNOS]
-  Primjer: [PRIJEDLOG: BUY SOLUSDC 50]
+  Primjer: [PRIJEDLOG: BUY SOLUSDC 10]
+- Minimalni iznos trades je uvijek 5 USDC, nikad manje
 - Odgovaraj na jeziku na kojem ti korisnik piše (HR ili EN)`;
 
         const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
