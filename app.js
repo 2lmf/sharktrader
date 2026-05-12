@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initAutoTrade();
     initLiveMode();
     initNetPayout();
+    initChat();
     initTradingMode();
     initSettings();
     updateUI();
@@ -955,3 +956,121 @@ function logAction(msg, type = "INFO") {
 
     log.prepend(item);
 }
+// --- SHARK ANALYST CHAT ---
+let _chatHistory = [];
+let _chatOpen = false;
+
+function initChat() {
+    const fab    = document.getElementById('btnAnalyst');
+    const panel  = document.getElementById('analystPanel');
+    const close  = document.getElementById('btnCloseAnalyst');
+    const form   = document.getElementById('analystForm');
+    const input  = document.getElementById('analystInput');
+    if (!fab || !panel) return;
+
+    fab.onclick = () => {
+        _chatOpen = !_chatOpen;
+        panel.classList.toggle('open', _chatOpen);
+        if (_chatOpen && _chatHistory.length === 0) {
+            addChatMsg('analyst', 'Zdravo! Vidim tvoj portfolio i tržišne podatke u realnom vremenu. Što te zanima?');
+        }
+        if (_chatOpen) setTimeout(() => input.focus(), 280);
+    };
+    close.onclick = () => { _chatOpen = false; panel.classList.remove('open'); };
+    form.onsubmit = (e) => {
+        e.preventDefault();
+        const msg = input.value.trim();
+        if (!msg) return;
+        input.value = '';
+        sendToAnalyst(msg);
+    };
+}
+
+function buildAnalystContext() {
+    const holdings = Object.entries(state.holdings)
+        .filter(([, h]) => (h.quantity || h) > 0)
+        .map(([sym, h]) => {
+            const qty = h.quantity !== undefined ? h.quantity : h;
+            const buyPrice = h.buyPrice || 0;
+            const currentPrice = state.prices[sym]?.price || state.prices[sym] || 0;
+            const pnl = buyPrice > 0 ? (((currentPrice - buyPrice) / buyPrice) * 100).toFixed(1) + '%' : 'N/A';
+            return { symbol: sym.replace('USDC', ''), qty, buyPrice, currentPrice, pnl };
+        });
+
+    const topPrices = Object.entries(state.prices).slice(0, 12).map(([sym, p]) => ({
+        symbol: sym.replace('USDC', ''),
+        price: p?.price || p || 0
+    }));
+
+    return {
+        balance: state.balance.toFixed(2),
+        holdings,
+        sentiment: state.sentiment?.overall || document.getElementById('marketSentiment')?.textContent || 'NEUTRAL',
+        fng: state.marketWisdom?.fng || null,
+        topPrices,
+        mode: state.liveMode ? 'LIVE' : 'SIM'
+    };
+}
+
+async function sendToAnalyst(message) {
+    addChatMsg('user', message);
+    showTyping(true);
+    try {
+        const res = await fetch(`${state.bridgeUrl}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, context: buildAnalystContext() })
+        });
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        showTyping(false);
+        addChatMsg('analyst', data.reply);
+    } catch {
+        showTyping(false);
+        addChatMsg('analyst', 'Bridge nije dostupan. Pokreni server.js i poveži bridge za AI analitiku.', true);
+    }
+}
+
+function addChatMsg(role, text, isError) {
+    _chatHistory.push({ role, text });
+    const log = document.getElementById('analystLog');
+
+    let displayText = text;
+    let suggestion = null;
+    const match = text.match(/\[PRIJEDLOG:\s*(BUY|SELL)\s+(\w+USDC?)\s+([\d.]+)\]/i);
+    if (match) {
+        displayText = text.replace(match[0], '').trim();
+        suggestion = { action: match[1].toUpperCase(), symbol: match[2].toUpperCase(), amount: parseFloat(match[3]) };
+        if (!suggestion.symbol.endsWith('USDC')) suggestion.symbol += 'USDC';
+    }
+
+    const el = document.createElement('div');
+    el.className = `chat-msg chat-msg-${role}${isError ? ' chat-msg-error' : ''}`;
+    el.innerHTML = `<div class="chat-bubble">${displayText}</div>` + (suggestion ? `
+        <div class="chat-suggestion">
+            <span class="cs-label">${suggestion.action === 'BUY' ? '📈' : '📉'} PRIJEDLOG</span>
+            <span class="cs-action">${suggestion.action} ${suggestion.symbol.replace('USDC','')} · ${suggestion.amount} USDC</span>
+            <button class="cs-exec-btn" onclick="execSuggestion('${suggestion.symbol}','${suggestion.action.toLowerCase()}',${suggestion.amount})">IZVRŠI</button>
+        </div>` : '');
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+}
+
+function showTyping(show) {
+    let el = document.getElementById('analystTyping');
+    if (show && !el) {
+        el = document.createElement('div');
+        el.id = 'analystTyping';
+        el.className = 'chat-msg chat-msg-analyst chat-typing';
+        el.innerHTML = '<div class="chat-bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+        document.getElementById('analystLog').appendChild(el);
+        document.getElementById('analystLog').scrollTop = 99999;
+    } else if (!show && el) { el.remove(); }
+}
+
+window.execSuggestion = (symbol, type, amount) => {
+    _chatOpen = false;
+    document.getElementById('analystPanel').classList.remove('open');
+    openTradeModal(symbol, type);
+    setTimeout(() => { document.getElementById('tradeAmount').value = amount; }, 50);
+};

@@ -175,6 +175,61 @@ app.get('/api/market-wisdom', async (req, res) => {
     }
 });
 
+// --- ENDPOINT: Shark Analyst AI Chat (Gemini) ---
+app.post('/api/chat', async (req, res) => {
+    const { message, context } = req.body;
+    if (!message) return res.status(400).json({ error: 'No message' });
+    if (!process.env.GEMINI_API_KEY) {
+        return res.status(503).json({ error: 'GEMINI_API_KEY nije postavljen u .env datoteci.' });
+    }
+
+    try {
+        const holdingsStr = context?.holdings?.length > 0
+            ? context.holdings.map(h =>
+                `  ${h.symbol}: ${Number(h.qty).toFixed(4)} kom @ $${h.buyPrice} → $${h.currentPrice} (P&L: ${h.pnl})`
+              ).join('\n')
+            : '  Nema otvorenih pozicija';
+
+        const pricesStr = (context?.topPrices || []).slice(0, 10)
+            .map(p => `${p.symbol}=$${Number(p.price).toFixed(2)}`).join(' | ');
+
+        const systemPrompt =
+`Ti si Shark Trader AI — oštar, koncizan kripto analitičar bez suhoparnih fraza.
+Imaš pristup stvarnim podacima o korisnikovom portfoliu i tržištu.
+
+SNAPSHOT PORTFOLIA (${context?.mode || 'SIM'} mode):
+- Slobodni balans: $${context?.balance} USDC
+- Pozicije:
+${holdingsStr}
+- Tržišni sentiment: ${context?.sentiment || 'N/A'}
+- Fear & Greed: ${context?.fng ? context.fng.value + ' (' + context.fng.classification + ')' : 'N/A'}
+- Trenutne cijene: ${pricesStr}
+
+PRAVILA:
+- Maksimalno 100 riječi po odgovoru
+- Referenciraj konkretne brojke iz snapshota
+- Budi direktan, bez uvoda i ispunjavanja
+- Ako predlažeš trade, na kraju odgovora stavi TOČNO ovaj format: [PRIJEDLOG: BUY/SELL SIMBOLUSDC IZNOS]
+  Primjer: [PRIJEDLOG: BUY SOLUSDC 50]
+- Odgovaraj na jeziku na kojem ti korisnik piše (HR ili EN)`;
+
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        const response = await axios.post(geminiUrl, {
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: 'user', parts: [{ text: message }] }],
+            generationConfig: { maxOutputTokens: 220, temperature: 0.7 }
+        });
+
+        const reply = response.data.candidates[0].content.parts[0].text;
+        console.log(`🦈 Analyst chat: "${message.substring(0, 50)}..." → ${reply.length} chars`);
+        res.json({ reply });
+    } catch (err) {
+        const errMsg = err.response?.data?.error?.message || err.message;
+        console.error('❌ Shark Analyst Error:', errMsg);
+        res.status(500).json({ error: errMsg });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`🦈 Shark Bridge AKTIVAN na http://localhost:${PORT}`);
     console.log(`Ovaj prozor mora ostati otvoren za LIVE trgovanje.`);

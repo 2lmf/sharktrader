@@ -186,7 +186,23 @@
         </div>
     </div>
 
-    <script src="app.js?v=37"></script>
+    <!-- Shark Analyst Chat -->
+    <button class="analyst-fab" id="btnAnalyst">🦈 <span>AI ANALYST</span></button>
+
+    <div class="analyst-panel" id="analystPanel">
+        <div class="analyst-header">
+            <span class="analyst-title"><i class="fas fa-brain"></i> SHARK ANALYST</span>
+            <button class="analyst-close" id="btnCloseAnalyst">✕</button>
+        </div>
+        <div class="analyst-log" id="analystLog"></div>
+        <form class="analyst-form" id="analystForm" autocomplete="off">
+            <input type="text" class="analyst-input" id="analystInput"
+                   placeholder="Komentiraj tržište ili predloži trade...">
+            <button type="submit" class="analyst-send"><i class="fas fa-paper-plane"></i></button>
+        </form>
+    </div>
+
+    <script src="app.js?v=38"></script>
     <script>
         // FORCIBLY UNREGISTER SERVICE WORKERS (Bust aggressive PWA cache)
         if ('serviceWorker' in navigator) {
