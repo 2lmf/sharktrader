@@ -1021,7 +1021,7 @@ async function sendToAnalyst(message) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message, context: buildAnalystContext() })
         });
-        if (!res.ok) throw new Error(res.status);
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.status); }
         const data = await res.json();
         showTyping(false);
         addChatMsg('analyst', data.reply);
