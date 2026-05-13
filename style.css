@@ -1255,6 +1255,13 @@ input:checked+.toggle-switch::after {
 }
 .cs-exec-btn:hover { background: #fff; }
 
+.chat-swap { flex-direction: column; gap: 6px; }
+.cs-swap-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cs-sell { color: #ff8c69; }
+.cs-buy  { color: #52e3a0; }
+.cs-sell-btn { background: rgba(255,100,60,0.7); }
+.cs-sell-btn:hover { background: #ff6040; }
+
 .chat-typing .chat-bubble { display: flex; gap: 5px; align-items: center; padding: 11px 16px; }
 .chat-typing .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: dot-b 1.2s infinite; }
 .chat-typing .dot:nth-child(2) { animation-delay: 0.2s; }

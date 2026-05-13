@@ -232,9 +232,9 @@ async function checkBridgeStatus() {
 
                 if (total <= 0) return;
 
-                // 1. Tradeable stablecoins
+                // 1. Tradeable stablecoins — only FREE balance (not locked in open orders)
                 if (['USDC', 'USDT', 'BUSD', 'DAI'].includes(b.asset)) {
-                    totalCash += total;
+                    totalCash += free;
                 }
                 // 2. USD fiat — prikaži ali ne trguj
                 else if (b.asset === 'USD') {
@@ -1038,22 +1038,49 @@ function addChatMsg(role, text, isError) {
     const log = document.getElementById('analystLog');
 
     let displayText = text;
-    let suggestion = null;
-    const match = text.match(/\[PRIJEDLOG:\s*(BUY|SELL)\s+(\w+USDC?)\s+([\d.]+)\]/i);
-    if (match) {
-        displayText = text.replace(match[0], '').trim();
-        suggestion = { action: match[1].toUpperCase(), symbol: match[2].toUpperCase(), amount: parseFloat(match[3]) };
-        if (!suggestion.symbol.endsWith('USDC')) suggestion.symbol += 'USDC';
+    const suggestions = [];
+    const tagRegex = /\[PRIJEDLOG:\s*(BUY|SELL)\s+(\w+USDC?)\s+([\d.]+)\]/gi;
+    let tagMatch;
+    while ((tagMatch = tagRegex.exec(text)) !== null) {
+        const sym = tagMatch[2].toUpperCase();
+        suggestions.push({
+            action: tagMatch[1].toUpperCase(),
+            symbol: sym.endsWith('USDC') ? sym : sym + 'USDC',
+            amount: parseFloat(tagMatch[3])
+        });
+    }
+    displayText = text.replace(/\[PRIJEDLOG:[^\]]+\]/gi, '').trim();
+
+    const isSwap = suggestions.length === 2 && suggestions[0].action === 'SELL' && suggestions[1].action === 'BUY';
+
+    let suggestionsHtml = '';
+    if (isSwap) {
+        const sell = suggestions[0], buy = suggestions[1];
+        suggestionsHtml = `
+        <div class="chat-suggestion chat-swap">
+            <span class="cs-label">🔄 SWAP PRIJEDLOG</span>
+            <div class="cs-swap-row">
+                <span class="cs-action cs-sell">📉 PRODAJ ${sell.symbol.replace('USDC','')} &middot; ${sell.amount} USDC</span>
+                <button class="cs-exec-btn cs-sell-btn" onclick="execSuggestion('${sell.symbol}','sell',${sell.amount})">IZVRŠI</button>
+            </div>
+            <div class="cs-swap-row">
+                <span class="cs-action cs-buy">📈 KUPI ${buy.symbol.replace('USDC','')} &middot; ${buy.amount} USDC</span>
+                <button class="cs-exec-btn" onclick="execSuggestion('${buy.symbol}','buy',${buy.amount})">IZVRŠI</button>
+            </div>
+        </div>`;
+    } else if (suggestions.length === 1) {
+        const s = suggestions[0];
+        suggestionsHtml = `
+        <div class="chat-suggestion">
+            <span class="cs-label">${s.action === 'BUY' ? '📈' : '📉'} PRIJEDLOG</span>
+            <span class="cs-action">${s.action} ${s.symbol.replace('USDC','')} &middot; ${s.amount} USDC</span>
+            <button class="cs-exec-btn" onclick="execSuggestion('${s.symbol}','${s.action.toLowerCase()}',${s.amount})">IZVRŠI</button>
+        </div>`;
     }
 
     const el = document.createElement('div');
     el.className = `chat-msg chat-msg-${role}${isError ? ' chat-msg-error' : ''}`;
-    el.innerHTML = `<div class="chat-bubble">${displayText}</div>` + (suggestion ? `
-        <div class="chat-suggestion">
-            <span class="cs-label">${suggestion.action === 'BUY' ? '📈' : '📉'} PRIJEDLOG</span>
-            <span class="cs-action">${suggestion.action} ${suggestion.symbol.replace('USDC','')} · ${suggestion.amount} USDC</span>
-            <button class="cs-exec-btn" onclick="execSuggestion('${suggestion.symbol}','${suggestion.action.toLowerCase()}',${suggestion.amount})">IZVRŠI</button>
-        </div>` : '');
+    el.innerHTML = `<div class="chat-bubble">${displayText}</div>` + suggestionsHtml;
     log.appendChild(el);
     log.scrollTop = log.scrollHeight;
 }
