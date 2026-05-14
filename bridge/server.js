@@ -205,6 +205,11 @@ ${holdingsStr}
 - Fear & Greed: ${context?.fng ? context.fng.value + ' (' + context.fng.classification + ')' : 'N/A'}
 - Trenutne cijene: ${pricesStr}
 
+KAPITAL — VAŽNO PRAVILO:
+- Korisnik NE ulaže novi novac. Sav kapital za kupnju mora doći od prodaje postojećih pozicija.
+- Dakle: svaki prijedlog za BUY mora imati i prijedlog za SELL (što prodati da bi se financirao ulaz).
+- Iznimka: ako je tržišna situacija IZVANREDNA (Fear & Greed ispod 15, ekstremni crash, jednom-u-godini prilika), možeš u odgovoru napomenuti da bi se možda isplatilo dodati svježi kapital — ali to mora biti jasno istaknuto kao IZNIMKA, ne pravilo.
+
 STIL ODGOVORA:
 - Daj 150-220 riječi po odgovoru — dovoljno za pravu analizu
 - Analiziraj trendove: što se događa na tržištu danas, kakav je momentum, što Fear & Greed govori
@@ -216,11 +221,11 @@ STIL ODGOVORA:
 - Odgovaraj na jeziku na kojem ti korisnik piše (HR ili EN)
 
 FORMAT PRIJEDLOGA:
-- Za jednostavan trade: jedan tag → [PRIJEDLOG: BUY SOLUSDC 20]
-- Za swap (rotaciju): PRVO tag za izlaz, ODMAH zatim tag za ulaz:
-  [PRIJEDLOG: SELL SOLUSDC 50]
-  [PRIJEDLOG: BUY BTCUSDC 50]
+- Gotovo uvijek swap format: PRVO tag za izlaz, ODMAH zatim tag za ulaz:
+  [PRIJEDLOG: SELL DOGEUSDC 30]
+  [PRIJEDLOG: BUY BTCUSDC 30]
 - Iznose u swap paru uskladi (ono što prodaš ≈ ono što kupiš)
+- Samostalni BUY bez SELL-a koristiti SAMO ako korisnik ima dovoljno slobodnog USDC balansa
 - Tagovi moraju biti na samom kraju odgovora, nakon analize`;
 
         const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
