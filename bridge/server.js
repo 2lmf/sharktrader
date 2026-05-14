@@ -80,14 +80,24 @@ app.post('/api/order', async (req, res) => {
 
     try {
         const timestamp = Date.now() + timeOffset;
-        // Za BUY koristimo quoteOrderQty (iznos u USDC), za SELL bismo trebali quantity (količinu kovanice)
-        // Ali bot trenutno šalje quoteOrderQty za oboje. Popravit ćemo to ako treba.
-        // Osiguravamo maksimalno 4 decimale za USDC kako bismo izbjegli precision grešku s Binance API-jem.
-        const safeQty = parseFloat(Number(quoteOrderQty).toFixed(4));
-        const queryString = `symbol=${symbol}&side=${side.toUpperCase()}&type=MARKET&quoteOrderQty=${safeQty}&recvWindow=60000&timestamp=${timestamp}`;
-        const signature = generateSignature(queryString);
+        let queryString;
 
-        console.log(`🚀 Šaljem nalog: ${side} ${symbol} iznos: ${safeQty} USDC`);
+        if (side.toUpperCase() === 'SELL') {
+            // Binance SELL zahtijeva quantity (količina coina), ne quoteOrderQty
+            // Dohvati trenutnu cijenu i pretvori USDC iznos u količinu coina
+            const priceRes = await binanceClient.get(`/api/v3/ticker/price?symbol=${symbol}`);
+            const currentPrice = parseFloat(priceRes.data.price);
+            const coinQty = parseFloat((quoteOrderQty / currentPrice).toFixed(6));
+            console.log(`🚀 SELL ${symbol}: ${quoteOrderQty} USDC ÷ ${currentPrice} = ${coinQty} kom`);
+            queryString = `symbol=${symbol}&side=SELL&type=MARKET&quantity=${coinQty}&recvWindow=60000&timestamp=${timestamp}`;
+        } else {
+            // BUY: quoteOrderQty (koliko USDC trošimo)
+            const safeQty = parseFloat(Number(quoteOrderQty).toFixed(4));
+            console.log(`🚀 BUY ${symbol} iznos: ${safeQty} USDC`);
+            queryString = `symbol=${symbol}&side=BUY&type=MARKET&quoteOrderQty=${safeQty}&recvWindow=60000&timestamp=${timestamp}`;
+        }
+
+        const signature = generateSignature(queryString);
         console.log(`🔗 Query: ${queryString}`);
 
         const response = await binanceClient.post(`/api/v3/order?${queryString}&signature=${signature}`, null, {
