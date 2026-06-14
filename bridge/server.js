@@ -87,7 +87,41 @@ app.post('/api/order', async (req, res) => {
             // Dohvati trenutnu cijenu i pretvori USDC iznos u količinu coina
             const priceRes = await binanceClient.get(`/api/v3/ticker/price?symbol=${symbol}`);
             const currentPrice = parseFloat(priceRes.data.price);
-            const coinQty = parseFloat((quoteOrderQty / currentPrice).toFixed(6));
+            
+            let rawCoinQty = quoteOrderQty / currentPrice;
+            let coinQty;
+            
+            // Dinamičko dohvaćanje LOT_SIZE stepSize kako bismo izbjegli LOT_SIZE filter grešku na Binanceu
+            let stepSize = null;
+            try {
+                const infoRes = await binanceClient.get(`/api/v3/exchangeInfo?symbol=${symbol}`);
+                const symbolInfo = infoRes.data.symbols?.[0];
+                const lotSizeFilter = symbolInfo?.filters?.find(f => f.filterType === 'LOT_SIZE');
+                stepSize = lotSizeFilter?.stepSize;
+            } catch (infoErr) {
+                console.error(`⚠️ Neuspješno dohvaćanje exchangeInfo za ${symbol}, koristim default:`, infoErr.message);
+            }
+
+            if (stepSize) {
+                const step = parseFloat(stepSize);
+                if (step > 0) {
+                    let precision = 0;
+                    const parts = stepSize.split('.');
+                    if (parts.length === 2) {
+                        const frac = parts[1].replace(/0+$/, '');
+                        precision = frac.length;
+                    }
+                    const factor = Math.pow(10, precision);
+                    // Koristimo floor (zaokruživanje dolje) kako ne bismo prodali više nego što imamo
+                    coinQty = (Math.floor(rawCoinQty * factor) / factor).toFixed(precision);
+                    console.log(`🎯 Prilagođeno prema LOT_SIZE stepSize (${stepSize}): ${coinQty} (preciznost: ${precision} decimala)`);
+                } else {
+                    coinQty = parseFloat(rawCoinQty.toFixed(6));
+                }
+            } else {
+                coinQty = parseFloat(rawCoinQty.toFixed(6));
+            }
+
             console.log(`🚀 SELL ${symbol}: ${quoteOrderQty} USDC ÷ ${currentPrice} = ${coinQty} kom`);
             queryString = `symbol=${symbol}&side=SELL&type=MARKET&quantity=${coinQty}&recvWindow=60000&timestamp=${timestamp}`;
         } else {
