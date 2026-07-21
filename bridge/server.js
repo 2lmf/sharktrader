@@ -5,10 +5,8 @@ const axios = require('axios');
 const crypto = require('crypto');
 const SocksProxyAgent = require('socks-proxy-agent');
 
-// Konfiguracija za Proxy (Shadow Bridge)
 const PROXY_URL = process.env.PROXY_URL || 'socks5h://127.0.0.1:1080';
 const USE_PROXY = process.env.USE_PROXY === 'true';
-
 const httpsAgent = USE_PROXY ? new SocksProxyAgent(PROXY_URL) : null;
 
 const app = express();
@@ -16,60 +14,77 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = 3000;
-const BINANCE_API_URL = 'https://api.binance.com';
+const OKX_API_URL = 'https://my.okx.com';
 
-const binanceClient = axios.create({
-    baseURL: BINANCE_API_URL,
+const okxClient = axios.create({
+    baseURL: OKX_API_URL,
     httpsAgent: httpsAgent,
     httpAgent: httpsAgent
 });
 
 let timeOffset = 0;
 
-// Sinkronizacija vremena s Binance serverom u pozadini
 async function syncTime() {
     try {
-        const response = await binanceClient.get('/api/v3/time');
-        const serverTime = response.data.serverTime;
+        const response = await okxClient.get('/api/v5/public/time');
+        const serverTime = parseInt(response.data.data[0].ts);
         timeOffset = serverTime - Date.now();
-        console.log(`⏱️ Vrijeme sinkronizirano s Binanceom! Offset: ${timeOffset}ms`);
+        console.log(`⏱️ Vrijeme sinkronizirano s OKX-om! Offset: ${timeOffset}ms`);
     } catch (err) {
         console.error("❌ Greška pri sinkronizaciji vremena:", err.message);
     }
 }
 syncTime();
-setInterval(syncTime, 1000 * 60 * 10); // Osvježi svakih 10 minuta
+setInterval(syncTime, 1000 * 60 * 10);
 
-// --- MIDDLEWARE: Signature Generator for Binance ---
-function generateSignature(queryString) {
+function generateOKXSignature(timestamp, method, requestPath, body = '') {
+    const message = timestamp + method.toUpperCase() + requestPath + body;
     return crypto
-        .createHmac('sha256', process.env.BINANCE_SECRET_KEY)
-        .update(queryString)
-        .digest('hex');
+        .createHmac('sha256', process.env.OKX_SECRET_KEY)
+        .update(message)
+        .digest('base64');
+}
+
+function getOKXHeaders(method, requestPath, body = '') {
+    const timestamp = new Date(Date.now() + timeOffset).toISOString();
+    return {
+        'OK-ACCESS-KEY': process.env.OKX_API_KEY,
+        'OK-ACCESS-SIGN': generateOKXSignature(timestamp, method, requestPath, body),
+        'OK-ACCESS-TIMESTAMP': timestamp,
+        'OK-ACCESS-PASSPHRASE': process.env.OKX_PASSPHRASE,
+        'Content-Type': 'application/json'
+    };
+}
+
+// Konverzija simbola: BTCUSDC → BTC-USDC
+function toOKX(symbol) {
+    return symbol.replace('USDC', '-USDC');
 }
 
 // --- ENDPOINT: Get Real Balance ---
 app.get('/api/account', async (req, res) => {
     try {
-        const timestamp = Date.now() + timeOffset;
-        const queryString = `recvWindow=60000&timestamp=${timestamp}`;
-        const signature = generateSignature(queryString);
-
-        const response = await binanceClient.get(`/api/v3/account?${queryString}&signature=${signature}`, {
-            headers: { 'X-MBX-APIKEY': process.env.BINANCE_API_KEY }
+        const path = '/api/v5/account/balance';
+        const response = await okxClient.get(path, {
+            headers: getOKXHeaders('GET', path)
         });
 
-        res.json(response.data);
-    } catch (err) {
-        const errorData = err.response?.data || err.message;
-        console.error("❌ Binance API Greška:", errorData);
-
-        // Automatska re-sinkronizacija ako je problem s vremenom (-1021)
-        if (errorData.code === -1021) {
-            console.log("🔄 Otkriven problem s vremenom. Pokrećem prisilnu re-sinkronizaciju...");
-            await syncTime();
+        if (response.data.code !== '0') {
+            return res.status(500).json({ error: response.data.msg });
         }
 
+        // Pretvori OKX format u Binance-kompatibilan format koji frontend očekuje
+        const details = response.data.data?.[0]?.details || [];
+        const balances = details.map(d => ({
+            asset: d.ccy,
+            free: d.availBal,
+            locked: d.frozenBal
+        }));
+
+        res.json({ balances });
+    } catch (err) {
+        const errorData = err.response?.data || err.message;
+        console.error("❌ OKX Account Greška:", errorData);
         res.status(500).json({ error: errorData });
     }
 });
@@ -77,124 +92,136 @@ app.get('/api/account', async (req, res) => {
 // --- ENDPOINT: Execute Real Order ---
 app.post('/api/order', async (req, res) => {
     const { symbol, side, quoteOrderQty } = req.body;
+    const instId = toOKX(symbol);
 
     try {
-        const timestamp = Date.now() + timeOffset;
-        let queryString;
+        let orderBody;
 
         if (side.toUpperCase() === 'SELL') {
-            // Binance SELL zahtijeva quantity (količina coina), ne quoteOrderQty
-            // Dohvati trenutnu cijenu i pretvori USDC iznos u količinu coina
-            const priceRes = await binanceClient.get(`/api/v3/ticker/price?symbol=${symbol}`);
-            const currentPrice = parseFloat(priceRes.data.price);
-            
+            // SELL: OKX treba količinu coina (base currency)
+            const pricePath = `/api/v5/market/ticker?instId=${instId}`;
+            const priceRes = await okxClient.get(pricePath);
+            const currentPrice = parseFloat(priceRes.data.data[0].last);
+
             let rawCoinQty = quoteOrderQty / currentPrice;
             let coinQty;
-            
-            // Dinamičko dohvaćanje LOT_SIZE stepSize kako bismo izbjegli LOT_SIZE filter grešku na Binanceu
-            let stepSize = null;
+
+            // Dohvati lotSz za OKX instrument
+            let lotSz = null;
             try {
-                const infoRes = await binanceClient.get(`/api/v3/exchangeInfo?symbol=${symbol}`);
-                const symbolInfo = infoRes.data.symbols?.[0];
-                const lotSizeFilter = symbolInfo?.filters?.find(f => f.filterType === 'LOT_SIZE');
-                stepSize = lotSizeFilter?.stepSize;
-            } catch (infoErr) {
-                console.error(`⚠️ Neuspješno dohvaćanje exchangeInfo za ${symbol}, koristim default:`, infoErr.message);
+                const instrPath = `/api/v5/public/instruments?instType=SPOT&instId=${instId}`;
+                const instrRes = await okxClient.get(instrPath);
+                lotSz = instrRes.data.data?.[0]?.lotSz;
+            } catch (instrErr) {
+                console.error(`⚠️ Neuspješno dohvaćanje instruments za ${instId}:`, instrErr.message);
             }
 
-            if (stepSize) {
-                const step = parseFloat(stepSize);
+            if (lotSz) {
+                const step = parseFloat(lotSz);
                 if (step > 0) {
                     let precision = 0;
-                    const parts = stepSize.split('.');
+                    const parts = lotSz.split('.');
                     if (parts.length === 2) {
                         const frac = parts[1].replace(/0+$/, '');
                         precision = frac.length;
                     }
                     const factor = Math.pow(10, precision);
-                    // Koristimo floor (zaokruživanje dolje) kako ne bismo prodali više nego što imamo
                     coinQty = (Math.floor(rawCoinQty * factor) / factor).toFixed(precision);
-                    console.log(`🎯 Prilagođeno prema LOT_SIZE stepSize (${stepSize}): ${coinQty} (preciznost: ${precision} decimala)`);
+                    console.log(`🎯 Prilagođeno prema lotSz (${lotSz}): ${coinQty}`);
                 } else {
-                    coinQty = parseFloat(rawCoinQty.toFixed(6));
+                    coinQty = parseFloat(rawCoinQty.toFixed(6)).toString();
                 }
             } else {
-                coinQty = parseFloat(rawCoinQty.toFixed(6));
+                coinQty = parseFloat(rawCoinQty.toFixed(6)).toString();
             }
 
-            console.log(`🚀 SELL ${symbol}: ${quoteOrderQty} USDC ÷ ${currentPrice} = ${coinQty} kom`);
-            queryString = `symbol=${symbol}&side=SELL&type=MARKET&quantity=${coinQty}&recvWindow=60000&timestamp=${timestamp}`;
+            console.log(`🚀 SELL ${instId}: ${quoteOrderQty} USDC ÷ ${currentPrice} = ${coinQty} kom`);
+            orderBody = { instId, tdMode: 'cash', side: 'sell', ordType: 'market', sz: coinQty };
+
         } else {
-            // BUY: quoteOrderQty (koliko USDC trošimo)
-            const safeQty = parseFloat(Number(quoteOrderQty).toFixed(4));
-            console.log(`🚀 BUY ${symbol} iznos: ${safeQty} USDC`);
-            queryString = `symbol=${symbol}&side=BUY&type=MARKET&quoteOrderQty=${safeQty}&recvWindow=60000&timestamp=${timestamp}`;
+            // BUY: OKX prima USDC iznos direktno uz tgtCcy: 'quote_ccy'
+            const safeQty = parseFloat(Number(quoteOrderQty).toFixed(4)).toString();
+            console.log(`🚀 BUY ${instId} iznos: ${safeQty} USDC`);
+            orderBody = { instId, tdMode: 'cash', side: 'buy', ordType: 'market', sz: safeQty, tgtCcy: 'quote_ccy' };
         }
 
-        const signature = generateSignature(queryString);
-        console.log(`🔗 Query: ${queryString}`);
+        const bodyStr = JSON.stringify(orderBody);
+        const path = '/api/v5/trade/order';
+        console.log(`🔗 OKX Order body: ${bodyStr}`);
 
-        const response = await binanceClient.post(`/api/v3/order?${queryString}&signature=${signature}`, null, {
-            headers: { 'X-MBX-APIKEY': process.env.BINANCE_API_KEY }
+        const response = await okxClient.post(path, orderBody, {
+            headers: getOKXHeaders('POST', path, bodyStr)
         });
 
+        if (response.data.code !== '0') {
+            console.error("❌ OKX Order Greška:", response.data);
+            return res.status(500).json({ error: response.data });
+        }
+
         res.json(response.data);
     } catch (err) {
         const errorData = err.response?.data || err.message;
-        console.error("❌ Binance Order Greška:", errorData);
-
-        // Automatska re-sinkronizacija ako je problem s vremenom (-1021)
-        if (errorData.code === -1021) {
-            console.log("🔄 Otkriven problem s vremenom tijekom reda. Pokrećem re-sinkronizaciju...");
-            await syncTime();
-        }
-
+        console.error("❌ OKX Order Greška:", errorData);
         res.status(500).json({ error: errorData });
     }
 });
 
-// --- ENDPOINT: Get Prices (Proxy to avoid CORS/IP blocks) ---
+// --- ENDPOINT: Get Prices (proxy za SIM mode i CORS) ---
 app.get('/api/prices', async (req, res) => {
     try {
-        const { symbols } = req.query;
-        const config = { params: symbols ? { symbols: symbols } : {} };
-        const response = await binanceClient.get('/api/v3/ticker/24hr', config);
-        res.json(response.data);
+        // Dohvati sve SPOT tickere s OKX-a (javni endpoint, nema autentikacije)
+        const response = await okxClient.get('/api/v5/market/tickers?instType=SPOT');
+
+        if (response.data.code !== '0') {
+            return res.status(500).json({ error: response.data.msg });
+        }
+
+        // Parsiraj tražene simbole iz requesta (Binance format: ["BTCUSDC", ...])
+        let wantedSet = null;
+        if (req.query.symbols) {
+            try {
+                const arr = JSON.parse(req.query.symbols);
+                wantedSet = new Set(arr);
+            } catch (_) {}
+        }
+
+        // Pretvori OKX format u Binance-kompatibilan format koji frontend očekuje
+        const tickers = response.data.data
+            .filter(t => {
+                const binanceSymbol = t.instId.replace('-', '');
+                return wantedSet ? wantedSet.has(binanceSymbol) : true;
+            })
+            .map(t => {
+                const last = parseFloat(t.last);
+                const open24h = parseFloat(t.open24h);
+                const changePercent = open24h > 0
+                    ? ((last - open24h) / open24h * 100).toFixed(2)
+                    : '0.00';
+                return {
+                    symbol: t.instId.replace('-', ''),
+                    lastPrice: t.last,
+                    priceChangePercent: changePercent,
+                    volume: t.vol24h,
+                    quoteVolume: t.volCcy24h,
+                    highPrice: t.high24h,
+                    lowPrice: t.low24h
+                };
+            });
+
+        res.json(tickers);
     } catch (err) {
         const errorData = err.response?.data || err.message;
-        console.error("❌ Batch Price Fetch Error:", errorData);
-
-        // EXTRA DEBUG: If it's an invalid symbol error, find which one!
-        if (req.query.symbols && errorData.code === -1121) {
-            console.log("🔍 Running elimination debug to find the culprit...");
-            try {
-                const coins = JSON.parse(req.query.symbols);
-                for (const coin of coins) {
-                    try {
-                        await binanceClient.get('/api/v3/ticker/24hr', { params: { symbol: coin } });
-                    } catch (e) {
-                        console.error(`‼️ FOUND INVALID SYMBOL: ${coin}`);
-                        console.error(`Reason: ${JSON.stringify(e.response?.data || e.message)}`);
-                    }
-                }
-            } catch (parseErr) {
-                console.error("Debug Parse Error:", parseErr.message);
-            }
-        }
-        
+        console.error("❌ OKX Prices Greška:", errorData);
         res.status(500).json({ error: errorData });
     }
 });
 
-// --- ENDPOINT: Market Wisdom (v0.25 Hyperdrive) ---
+// --- ENDPOINT: Market Wisdom (Fear & Greed + mocked Whale/GitHub) ---
 app.get('/api/market-wisdom', async (req, res) => {
     try {
-        // 1. Fear & Greed Index
         const fngRes = await axios.get('https://api.alternative.me/fng/?format=json');
         const fngData = fngRes.data.data[0];
 
-        // 2. Mocked Whale & GitHub (Za demo v0.25)
-        // Ovdje bi išla prava integracija sa Whale-Alert.io API-jem
         const wisdom = {
             fng: {
                 value: parseInt(fngData.value),
@@ -202,7 +229,7 @@ app.get('/api/market-wisdom', async (req, res) => {
                 timestamp: fngData.timestamp
             },
             whales: [
-                { type: 'OUTFLOW', amount: '450 BTC', from: 'Binance', to: 'Unknown Wallet', time: '5m ago' },
+                { type: 'OUTFLOW', amount: '450 BTC', from: 'OKX', to: 'Unknown Wallet', time: '5m ago' },
                 { type: 'INFLOW', amount: '1200 ETH', from: 'Unknown Wallet', to: 'Coinbase', time: '12m ago' }
             ],
             github: {
@@ -219,7 +246,7 @@ app.get('/api/market-wisdom', async (req, res) => {
     }
 });
 
-// --- ENDPOINT: Shark Analyst AI Chat (Gemini) ---
+// --- ENDPOINT: Shark Analyst AI Chat (Groq) ---
 app.post('/api/chat', async (req, res) => {
     const { message, context } = req.body;
     if (!message) return res.status(400).json({ error: 'No message' });
@@ -258,7 +285,7 @@ STIL ODGOVORA:
 - Daj 150-220 riječi po odgovoru — dovoljno za pravu analizu
 - Analiziraj trendove: što se događa na tržištu danas, kakav je momentum, što Fear & Greed govori
 - Poveži konkretne cijene iz snapshota s tržišnim kontekstom (korelacije, dominacija BTC-a, altcoin sezona itd.)
-- Uvijek poglEdaj portfelj i komentiraj pozicije — što je u plusu, što kasni, što ima potencijala
+- Uvijek pogledaj portfelj i komentiraj pozicije — što je u plusu, što kasni, što ima potencijala
 - Razmišljaj u rotacijama: ako vidiš da neka pozicija slabi a druga jača, predloži swap (npr. "izađi iz DOGEa, uđi u ETH")
 - Minimalni iznos trades je uvijek 5 USDC, nikad manje
 - Nemoj biti suhoparan — budi kao iskusan trader koji objašnjava kolegi, ne kao robot koji čita podatke
@@ -299,5 +326,5 @@ FORMAT PRIJEDLOGA:
 
 app.listen(PORT, () => {
     console.log(`🦈 Shark Bridge AKTIVAN na http://localhost:${PORT}`);
-    console.log(`Ovaj prozor mora ostati otvoren za LIVE trgovanje.`);
+    console.log(`OKX API spojen. Ovaj prozor mora ostati otvoren za LIVE trgovanje.`);
 });

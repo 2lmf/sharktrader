@@ -3,7 +3,7 @@
 const CONFIG = {
     UPDATE_INTERVAL: 5000,
     INITIAL_BALANCE: 1000,
-    BINANCE_FEE: 0.001, // 0.1% Standard Fee
+    OKX_FEE: 0.001, // 0.1% Standard Fee
     COINS: ['BTCUSDC', 'ETHUSDC', 'SOLUSDC', 'BNBUSDC', 'XRPUSDC', 'ADAUSDC', 'DOGEUSDC', 'DOTUSDC', 'POLUSDC', 'LINKUSDC', 'AVAXUSDC', 'FETUSDC', 'JUPUSDC', 'RENDERUSDC', 'PEPEUSDC', 'WIFUSDC', 'BONKUSDC', 'NEARUSDC', 'TAOUSDC', 'GRTUSDC', 'FLOKIUSDC', 'UNIUSDC', 'ONDOUSDC']
 };
 
@@ -11,7 +11,7 @@ const COIN_METADATA = {
     'BTCUSDC': { name: 'Bitcoin', icon: 'fab fa-bitcoin' },
     'ETHUSDC': { name: 'Ethereum', icon: 'fab fa-ethereum' },
     'SOLUSDC': { name: 'Solana', icon: 'fas fa-s' },
-    'BNBUSDC': { name: 'Binance Coin', icon: 'fas fa-coins' },
+    'BNBUSDC': { name: 'BNB', icon: 'fas fa-coins' },
     'XRPUSDC': { name: 'Ripple', icon: 'fas fa-x' },
     'ADAUSDC': { name: 'Cardano', icon: 'fas fa-dna' },
     'DOGEUSDC': { name: 'Dogecoin', icon: 'fas fa-dog' },
@@ -220,7 +220,7 @@ async function checkBridgeStatus() {
         if (res.ok) {
             const data = await res.json();
 
-            // MIRROR MODE: Sync total net worth from Binance
+            // MIRROR MODE: Sync total net worth from OKX
             let totalCash = 0;      // USDC/stablecoins — za trading
             let totalFiat = 0;      // USD fiat — samo za prikaz
             let realHoldings = {};
@@ -397,13 +397,12 @@ async function executeTrade() {
     const price = state.prices[activeTrade.symbol]?.price;
     if (!price) return alert("Cijena nije dostupna.");
 
-    const fee = amountUSDC * CONFIG.BINANCE_FEE;
+    const fee = amountUSDC * CONFIG.OKX_FEE;
 
 
     if (state.liveMode) {
-        if (amountUSDC < 5.1) return alert("Binance minimum (MIN_NOTIONAL) je 5.10 USDC po nalogu.");
-        
-        // Manualni trade na Binanceu
+        if (amountUSDC < 5.1) return alert("OKX minimum je 5.10 USDC po nalogu.");
+
         logAction(`LIVE MANUAL: Pokrećem ${activeTrade.type.toUpperCase()} za ${activeTrade.symbol}...`, "INFO");
         try {
             const res = await fetch(`${state.bridgeUrl}/api/order`, {
@@ -421,8 +420,8 @@ async function executeTrade() {
                 checkBridgeStatus();
                 closeModal();
             } else {
-                alert(`Binance greška: ${data.error?.msg || 'Nepoznato'}`);
-                logAction(`BINANCE GREŠKA: ${data.error?.msg}`, "ERROR");
+                alert(`OKX greška: ${data.error?.msg || data.error?.sMsg || 'Nepoznato'}`);
+                logAction(`OKX GREŠKA: ${data.error?.msg || data.error?.sMsg}`, "ERROR");
             }
         } catch (e) {
             alert("Greška u komunikaciji s Bridge-om.");
@@ -467,11 +466,15 @@ function saveState() {
 async function fetchPrices() {
     try {
         const symbolsQuery = JSON.stringify(CONFIG.COINS);
-        let url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(symbolsQuery)}`;
-        
-        // If bridge is connected, route through bridge to avoid CORS and IP blocks
+        let url, isOKXDirect = false;
+
         if (state.bridgeConnected) {
+            // Kroz bridge — bridge normalizira OKX format u Binance-kompatibilan
             url = `${state.bridgeUrl}/api/prices?symbols=${encodeURIComponent(symbolsQuery)}`;
+        } else {
+            // Direktno s OKX javnog API-ja (nema CORS problema za market data)
+            url = 'https://www.okx.com/api/v5/market/tickers?instType=SPOT';
+            isOKXDirect = true;
         }
 
         const response = await fetch(url, {
@@ -479,10 +482,30 @@ async function fetchPrices() {
         });
         const data = await response.json();
 
-        // Binance vraća instancu objekta s greškom ako nešto ne štima, ili array.
-        const filtered = Array.isArray(data) ? data : (data.code ? [] : [data]);
+        let coins;
+        if (isOKXDirect) {
+            if (data.code !== '0') { coins = []; }
+            else {
+                const wantedSet = new Set(CONFIG.COINS);
+                coins = data.data
+                    .filter(t => wantedSet.has(t.instId.replace('-', '')))
+                    .map(t => {
+                        const last = parseFloat(t.last);
+                        const open24h = parseFloat(t.open24h);
+                        return {
+                            symbol: t.instId.replace('-', ''),
+                            lastPrice: t.last,
+                            priceChangePercent: open24h > 0
+                                ? ((last - open24h) / open24h * 100).toFixed(2)
+                                : '0.00'
+                        };
+                    });
+            }
+        } else {
+            coins = Array.isArray(data) ? data : (data.code ? [] : [data]);
+        }
 
-        filtered.forEach(coin => {
+        coins.forEach(coin => {
             state.prices[coin.symbol] = {
                 price: parseFloat(coin.lastPrice),
                 change: parseFloat(coin.priceChangePercent)
@@ -619,7 +642,7 @@ async function runAutoTradeAgent() {
             const currentHolding = state.holdings[symbol] || 0;
             if (coin && currentHolding > 0) {
                 const sellVal = currentHolding * coin.price;
-                if (state.liveMode && sellVal < 5.1) continue; // Binance MIN_NOTIONAL zaštita od spama za sitniš (dust)
+                if (state.liveMode && sellVal < 5.1) continue; // OKX minimum order zaštita od spama za sitniš (dust)
 
                 if (coin.change > 10 || fngValue > 75) { // v0.37: F&G exit 70 -> 75
                     await autoExecuteTrade(symbol, 'sell', sellVal, "HYPER EXIT");
@@ -675,7 +698,7 @@ async function runAutoTradeAgent() {
         const currentHolding = state.holdings[symbol] || 0;
         if (currentHolding > 0) {
             const sellVal = currentHolding * coin.price;
-            if (state.liveMode && sellVal < 5.1) continue; // Binance MIN_NOTIONAL zaštita od spama za sitniš (dust)
+            if (state.liveMode && sellVal < 5.1) continue; // OKX minimum order zaštita od spama za sitniš (dust)
 
             if (coin.change > SHARK_AI.TAKE_PROFIT) {
                 await autoExecuteTrade(symbol, 'sell', sellVal, "PROFIT");
@@ -691,7 +714,7 @@ async function runAutoTradeAgent() {
 
 async function autoExecuteTrade(symbol, type, amountUSDC, reason = "") {
     const price = state.prices[symbol].price;
-    const fee = amountUSDC * CONFIG.BINANCE_FEE;
+    const fee = amountUSDC * CONFIG.OKX_FEE;
 
     if (state.liveMode) {
         try {
@@ -711,9 +734,9 @@ async function autoExecuteTrade(symbol, type, amountUSDC, reason = "") {
             const data = await res.json();
             if (res.ok) {
                 logAction(`REAL MONEY ${type.toUpperCase()} USPJEŠAN: ${symbol} (${reason})`, "SUCCESS");
-                checkBridgeStatus(); // Refresh balance/holdings from Binance
+                checkBridgeStatus(); // Refresh balance/holdings from OKX
             } else {
-                logAction(`BINANCE BROKER GREŠKA: ${data.error?.msg || 'Nepoznata greška'}`, "ERROR");
+                logAction(`OKX BROKER GREŠKA: ${data.error?.msg || data.error?.sMsg || 'Nepoznata greška'}`, "ERROR");
             }
         } catch (e) {
             logAction(`BRIDGE ERROR: Neuspješan kontakt s mostom.`, "ERROR");
