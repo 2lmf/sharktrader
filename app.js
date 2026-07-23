@@ -380,6 +380,10 @@ function initTradeModal() {
 }
 
 function openTradeModal(symbol, type) {
+    if (symbol === 'ADAUSDC' && type === 'sell') {
+        alert('Prodaja Cardano (ADA) je zabranjena.\nMožeš ga samo kupovati.');
+        return;
+    }
     const modal = document.getElementById('tradeModal');
     const title = document.getElementById('modalTitle');
     activeTrade = { symbol, type };
@@ -713,6 +717,10 @@ async function runAutoTradeAgent() {
 }
 
 async function autoExecuteTrade(symbol, type, amountUSDC, reason = "") {
+    if (symbol === 'ADAUSDC' && type === 'sell') {
+        logAction(`BLOKIRANO: Prodaja Cardano (ADA) je zabranjena — samo kupnja je dozvoljena.`, "WARN");
+        return;
+    }
     const price = state.prices[symbol].price;
     const fee = amountUSDC * CONFIG.OKX_FEE;
 
