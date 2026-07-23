@@ -140,6 +140,23 @@ app.post('/api/order', async (req, res) => {
 
         } else {
             // BUY: OKX prima USDC iznos direktno uz tgtCcy: 'quote_ccy'
+            // Provjeri minimum za ovaj par (minSz je u base valuti, pretvaramo u USDC)
+            try {
+                const instrPath = `/api/v5/public/instruments?instType=SPOT&instId=${instId}`;
+                const instrRes = await okxClient.get(instrPath);
+                const instr = instrRes.data.data?.[0];
+                if (instr?.minSz) {
+                    const pricePath = `/api/v5/market/ticker?instId=${instId}`;
+                    const priceRes = await okxClient.get(pricePath);
+                    const currentPrice = parseFloat(priceRes.data.data[0].last);
+                    const minUsdc = Math.ceil(parseFloat(instr.minSz) * currentPrice * 100) / 100;
+                    if (quoteOrderQty < minUsdc) {
+                        return res.status(400).json({ error: { code: '51020', msg: `Minimum za ${instId} je ${minUsdc.toFixed(2)} USDC` } });
+                    }
+                }
+            } catch (minErr) {
+                console.warn(`⚠️ Nije moguće dohvatiti minimum za ${instId}:`, minErr.message);
+            }
             const safeQty = parseFloat(Number(quoteOrderQty).toFixed(4)).toString();
             console.log(`🚀 BUY ${instId} iznos: ${safeQty} USDC`);
             orderBody = { instId, tdMode: 'cash', side: 'buy', ordType: 'market', sz: safeQty, tgtCcy: 'quote_ccy' };
