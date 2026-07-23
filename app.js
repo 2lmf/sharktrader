@@ -423,8 +423,10 @@ async function executeTrade() {
                 checkBridgeStatus();
                 closeModal();
             } else {
-                alert(`OKX greška: ${data.error?.msg || data.error?.sMsg || 'Nepoznato'}`);
-                logAction(`OKX GREŠKA: ${data.error?.msg || data.error?.sMsg}`, "ERROR");
+                const errCode = data.error?.code || '?';
+                const errMsg  = data.error?.msg || data.error?.sMsg || 'Nepoznato';
+                alert(`OKX greška [${errCode}]: ${errMsg}`);
+                logAction(`OKX GREŠKA [${errCode}]: ${errMsg}`, "ERROR");
             }
         } catch (e) {
             alert("Greška u komunikaciji s Bridge-om.");
