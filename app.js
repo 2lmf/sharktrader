@@ -405,7 +405,6 @@ async function executeTrade() {
 
 
     if (state.liveMode) {
-        if (amountUSDC < 5.1) return alert("OKX minimum je 5.10 USDC po nalogu.");
 
         logAction(`LIVE MANUAL: Pokrećem ${activeTrade.type.toUpperCase()} za ${activeTrade.symbol}...`, "INFO");
         try {
