@@ -153,9 +153,15 @@ app.post('/api/order', async (req, res) => {
             headers: getOKXHeaders('POST', path, bodyStr)
         });
 
-        if (response.data.code !== '0') {
-            console.error("❌ OKX Order Greška:", response.data);
-            return res.status(500).json({ error: response.data });
+        const topCode = response.data.code;
+        const firstResult = response.data.data?.[0];
+        const sCode = firstResult?.sCode;
+
+        if (topCode !== '0' || (sCode && sCode !== '0')) {
+            const errMsg = firstResult?.sMsg || response.data.msg || 'OKX greška';
+            const errCode = sCode || topCode;
+            console.error(`❌ OKX Order Greška [${errCode}]: ${errMsg}`, response.data);
+            return res.status(500).json({ error: { code: errCode, msg: errMsg, raw: response.data } });
         }
 
         res.json(response.data);

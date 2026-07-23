@@ -743,7 +743,9 @@ async function autoExecuteTrade(symbol, type, amountUSDC, reason = "") {
                 logAction(`REAL MONEY ${type.toUpperCase()} USPJEŠAN: ${symbol} (${reason})`, "SUCCESS");
                 checkBridgeStatus(); // Refresh balance/holdings from OKX
             } else {
-                logAction(`OKX BROKER GREŠKA: ${data.error?.msg || data.error?.sMsg || 'Nepoznata greška'}`, "ERROR");
+                const errCode = data.error?.code || '';
+                const errMsg  = data.error?.msg || data.error?.sMsg || 'Nepoznata greška';
+                logAction(`OKX BROKER GREŠKA [${errCode}]: ${errMsg}`, "ERROR");
             }
         } catch (e) {
             logAction(`BRIDGE ERROR: Neuspješan kontakt s mostom.`, "ERROR");
