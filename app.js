@@ -647,7 +647,7 @@ async function runAutoTradeAgent() {
             const currentHolding = state.holdings[symbol] || 0;
             if (coin && currentHolding > 0) {
                 const sellVal = currentHolding * coin.price;
-                if (state.liveMode && sellVal < 5.1) continue; // OKX minimum order zaštita od spama za sitniš (dust)
+                if (state.liveMode && sellVal < 2) continue; // OKX minimum order zaštita od spama za sitniš (dust)
 
                 if (coin.change > 10 || fngValue > 75) { // v0.37: F&G exit 70 -> 75
                     await autoExecuteTrade(symbol, 'sell', sellVal, "HYPER EXIT");
@@ -703,7 +703,7 @@ async function runAutoTradeAgent() {
         const currentHolding = state.holdings[symbol] || 0;
         if (currentHolding > 0) {
             const sellVal = currentHolding * coin.price;
-            if (state.liveMode && sellVal < 5.1) continue; // OKX minimum order zaštita od spama za sitniš (dust)
+            if (state.liveMode && sellVal < 2) continue; // OKX minimum order zaštita od spama za sitniš (dust)
 
             if (coin.change > SHARK_AI.TAKE_PROFIT) {
                 await autoExecuteTrade(symbol, 'sell', sellVal, "PROFIT");
